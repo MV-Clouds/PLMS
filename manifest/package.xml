@@ -31,6 +31,32 @@
 		<name>CustomObject</name>
 	</types>
 	<types>
+		<members>PLMS_Handler</members>
+		<name>CustomSite</name>
+	</types>
+	<types>
+		<members>Invoice_Record_Page1</members>
+		<members>MV_Product_Record_Page1</members>
+		<members>Product_Plan_Record_Page</members>
+		<members>Product_Subscriber_Record_Page</members>
+		<members>Product_Version_Record_Page</members>
+		<name>FlexiPage</name>
+	</types>
+	<types>
+		<members>Reminder_Emails_for_Product_Expiration</members>
+		<members>Update_Opportunity_to_Closed_Lost_on_Product_Expiration_Date</members>
+		<name>Flow</name>
+	</types>
+	<types>
+		<members>Invoice__c-Invoice Layout</members>
+		<members>Payment__c-Payment Layout</members>
+		<members>Product_Plan__c-Product Plan Layout</members>
+		<members>Product_Subscriber__c-Product Subscriber Layout</members>
+		<members>Product_Version__c-Product Version Layout</members>
+		<members>Product__c-Product Layout</members>
+		<name>Layout</name>
+	</types>
+	<types>
 		<members>paymentManagement</members>
 		<members>productPlanManagement</members>
 		<members>productSubscriberManagement</members>
