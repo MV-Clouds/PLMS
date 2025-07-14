@@ -1,0 +1,267 @@
+<template>
+    <lightning-card title=" Product Subscriber Management" icon-name="standard:people">
+        <div class="container">
+            <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                <div class="slds-col slds-size_1-of-2">
+                    <lightning-input type="search" label="Search Subscribers" value={searchKey}
+                        placeholder="Search by name and Expiration date" onchange={handleSearchChange}
+                        disabled={isSearchbarDisabled}></lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-2 slds-grid slds-gutters custome-bt-product-selection">
+                    <lightning-combobox name="product" label="Select Product" value={productId}
+                        dropdown-alignment="top-left" options={productOptions} class="custom-combo"
+                        onchange={handleProductChange}></lightning-combobox>
+                </div>
+            </div>
+
+            <div class="custom-table-container">
+
+                <template if:true={isLoading}>
+                    <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                </template>
+
+                <template if:false={isRecords}>
+                    <lightning-datatable key-field="Id" data={subscribers} columns={columns}
+                        onrowaction={handleRowAction} onsort={handleSort} sorted-by={sortBy}
+                        sorted-direction={sortDirection}></lightning-datatable>
+                </template>
+
+
+                <template if:true={isRecords}>
+                    <div class="slds-align_absolute-center slds-text-color_weak " style="font-size: 1.2rem;">
+                        No records found.
+                    </div>
+                </template>
+                <template if:false={isRecords}>
+                    <div class="slds-grid slds-grid_align-spread slds-p-top_small">
+                        <div class="slds-col">
+                            <p>Page {pageNumber} of {totalPages}</p>
+                        </div>
+                        <div class="slds-col">
+                            <lightning-button-group>
+                                <lightning-button label="Previous" onclick={handlePrevious}
+                                    disabled={isFirstPage}></lightning-button>
+                                <lightning-button label="Next" onclick={handleNext}
+                                    disabled={isLastPage}></lightning-button>
+                            </lightning-button-group>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <template if:true={isEditModalOpen}>
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true"
+                    aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container custom-modal-container">
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                                title="Close" onclick={closeEditModal}>
+                                <lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse"
+                                    size="small"></lightning-icon>
+                                <span class="slds-assistive-text">Close</span>
+                            </button>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Edit Product
+                                Subscriber</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium modal-form-body" id="modal-content-id-1">
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Product Name</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {selectedSubscriber.productName}
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Product Subscriber Name</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {selectedSubscriber.name}
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Organization/Company Name</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {selectedSubscriber.orgName}
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Install Date</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {selectedSubscriber.installDate}
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Product Version</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    <a href={selectedSubscriber.productVersionUrl}
+                                        target="_blank">{selectedSubscriber.productVersionName}</a>
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Current Expiration Date</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    <lightning-formatted-date-time value={selectedSubscriber.expirationDate}
+                                        year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit"
+                                        second="2-digit" hour12="true"></lightning-formatted-date-time>
+                                </div>
+                            </div>
+                            <lightning-input type="checkbox" label="Is Trial" checked={isTrial}
+                                onchange={handleIsTrialChange} disabled={getOriginalIsTrial}></lightning-input>
+
+                            <template if:true={showPlanDetails}>
+                                <lightning-combobox name="productPlan" label="Product Plan" value={productPlanId}
+                                    options={planOptions} onchange={handlePlanChange} required></lightning-combobox>
+                                <div class="slds-form-element slds-m-bottom_small">
+                                    <label class="slds-form-element__label">Price</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        {productPlanPrice}
+                                    </div>
+                                </div>
+                                <lightning-input type="number" label="Discount" value={discount}
+                                    onchange={handleDiscountChange} step="0.01"></lightning-input>
+                                <lightning-input type="number" label="Duration (Months)" value={duration}
+                                    onchange={handleDurationChange} required></lightning-input>
+                                <div class="slds-form-element slds-m-top_small">
+                                    <label class="slds-form-element__label">New Expiration Date (Preview)</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        <template if:true={newExpirationDateTime}>
+                                            <lightning-formatted-date-time value={newExpirationDateTime} year="numeric"
+                                                month="numeric" day="numeric" hour="2-digit" minute="2-digit"
+                                                second="2-digit" hour12="true"></lightning-formatted-date-time>
+                                        </template>
+                                        <template if:false={newExpirationDateTime}>
+                                            N/A
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <footer class="slds-modal__footer modal-footer">
+                            <button class="slds-button slds-button_neutral" onclick={closeEditModal}>Cancel</button>
+                            <button class="slds-button slds-button_brand" onclick={handlePreview}>Preview</button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </template>
+
+            <template if:true={isPreviewModalOpen}>
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-02" aria-modal="true"
+                    aria-describedby="modal-content-id-2" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container custom-modal-container">
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                                title="Close" onclick={closePreviewModal}>
+                                <lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse"
+                                    size="small"></lightning-icon>
+                                <span class="slds-assistive-text">Close</span>
+                            </button>
+                            <h2 id="modal-heading-02" class="slds-text-heading_medium slds-hyphenate">Preview Product
+                                Subscriber Changes</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium modal-form-body" id="modal-content-id-2">
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Product Name</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {previewSubscriber.productName}
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Product Subscriber Name</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {previewSubscriber.name}
+                                </div>
+                            </div>
+
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Organization/Company Name</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {previewSubscriber.orgName}
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Install Date</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {previewSubscriber.installDate}
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Product Version</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    <a href={previewSubscriber.productVersionUrl}
+                                        target="_blank">{previewSubscriber.productVersionName}</a>
+
+                                </div>
+                            </div>
+
+
+                            <div class="slds-form-element slds-m-bottom_small">
+                                <label class="slds-form-element__label">Is Trial</label>
+                                <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                    {previewSubscriber.isTrial}
+                                </div>
+                            </div>
+                            <template if:false={previewSubscriber.isTrial}>
+                                <div class="slds-form-element slds-m-bottom_small">
+                                    <label class="slds-form-element__label">Product Plan</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        {previewSubscriber.productPlanName}
+                                    </div>
+                                </div>
+                                <div class="slds-form-element slds-m-bottom_small">
+                                    <label class="slds-form-element__label">Price</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        {previewSubscriber.price}
+                                    </div>
+                                </div>
+                                <div class="slds-form-element slds-m-bottom_small">
+                                    <label class="slds-form-element__label">Discount</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        {previewSubscriber.discount}
+                                    </div>
+                                </div>
+                                <div class="slds-form-element slds-m-bottom_small">
+                                    <label class="slds-form-element__label">price after discount</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        {previewSubscriber.discountprice}
+                                    </div>
+                                </div>
+                                <div class="slds-form-element slds-m-bottom_small">
+                                    <label class="slds-form-element__label">Duration (Months)</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        {previewSubscriber.duration}
+                                    </div>
+                                </div>
+                                <div class="slds-form-element slds-m-bottom_small">
+                                    <label class="slds-form-element__label">Original Expiration Date</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        <lightning-formatted-date-time value={previewSubscriber.originalExpirationDate}
+                                            year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit"
+                                            second="2-digit" hour12="true"></lightning-formatted-date-time>
+                                    </div>
+                                </div>
+                                <div class="slds-form-element slds-m-bottom_small">
+                                    <label class="slds-form-element__label">New Expiration Date</label>
+                                    <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
+                                        <template if:true={previewSubscriber.newExpirationDateTime}>
+                                            <lightning-formatted-date-time
+                                                value={previewSubscriber.newExpirationDateTime} year="numeric"
+                                                month="numeric" day="numeric" hour="2-digit" minute="2-digit"
+                                                second="2-digit" hour12="true"></lightning-formatted-date-time>
+                                        </template>
+                                        <template if:false={previewSubscriber.newExpirationDateTime}>
+                                            N/A
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <footer class="slds-modal__footer modal-footer">
+                            <button class="slds-button slds-button_neutral" onclick={editFromPreview}>Edit</button>
+                            <button class="slds-button slds-button_brand" onclick={handleConfirmSave}>Confirm
+                                Save</button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </template>
+        </div>
+    </lightning-card>
+</template>

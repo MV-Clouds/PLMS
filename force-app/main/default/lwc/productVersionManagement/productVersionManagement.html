@@ -1,0 +1,58 @@
+<template>
+    <lightning-card title="Product Version Management" icon-name="custom:custom63">
+        <div class="container">
+            <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                <div class="slds-col slds-size_1-of-2">
+                    <lightning-input type="search" label="Search" value={searchTerm} placeholder="Search by version, name, type and release note "
+                        onchange={handleSearchTermChange} disabled={isSearchbarDisabled}></lightning-input>
+                    </div>
+                <div class="slds-col slds-size_1-of-2 slds-grid slds-gutters custome-bt-product-selection">
+                    <div class="custom-btn">
+                        <lightning-combobox name="product" label="Product" value={selectedProductId}
+                            placeholder="Select Product" options={products}
+                            onchange={handleProductChange}></lightning-combobox>
+                    </div>
+                    <div>
+                        <lightning-button label="New Version" variant="brand" onclick={handleNewVersion}
+                            disabled={newButtonDisabled} class="slds-m-top_large"></lightning-button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="custom-table-container">
+                <template if:true={isLoading}>
+                    <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                </template>
+                <template if:false={isLoading}>
+                    <lightning-datatable key-field="Id" data={productVersions} columns={columns}
+                        onrowaction={handleRowAction} hide-checkbox-column="true"
+                        sorted-by={sortBy}
+                        sorted-direction={sortDirection}
+                        onsort={handleSort}>
+                    </lightning-datatable>
+                    <template if:true={isRecords}>
+                        <div class="slds-align_absolute-center slds-text-color_weak "
+                            style="font-size: 1.2rem;">
+                            No records found.
+                        </div>
+                    </template>
+                    <template if:false={isRecords}>
+                        <div class="slds-grid slds-grid_align-spread slds-p-top_small">
+                            <div class="slds-col">
+                                <p>Page {pageNumber} of {totalPages}</p>
+                            </div>
+                            <div class="slds-col">
+                                <lightning-button-group>
+                                    <lightning-button label="Previous" onclick={handlePrevious}
+                                    disabled={isFirstPage}></lightning-button>
+                                    <lightning-button label="Next" onclick={handleNext}
+                                    disabled={isLastPage}></lightning-button>
+                                </lightning-button-group>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+            </div>
+        </div>
+    </lightning-card>
+</template>

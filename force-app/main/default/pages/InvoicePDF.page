@@ -1,0 +1,342 @@
+<apex:page controller="InvoiceController" renderAs="pdf" applyBodyTag="false" showHeader="false" standardStylesheets="false">
+<!--
+    Visualforce Page for Invoice PDF
+    ---------------------------------
+    - This version is updated to use the new data model provided.
+    - Merge fields now reference fields like 'start_date__c', 'price__c', 'first_name__c', etc.
+    - It still expects an 'id' parameter in the URL for the Invoice__c record.
+-->
+<head>
+    <style type="text/css">
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif; /* Using common PDF-safe fonts */
+            font-size: 12px;
+            color: #333;
+        }
+
+        .invoice-container {
+            background-color: white;
+            padding: 40px;
+        }
+
+        /* --- Header --- */
+        .header {
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 2rem;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            vertical-align: top;
+        }
+
+        .company-details h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .company-details p {
+            font-size: 12px;
+            color: #6b7280;
+            margin: 4px 0 0 0;
+        }
+
+        .invoice-title {
+            text-align: right;
+        }
+
+        .invoice-title h2 {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1f2937;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin: 0;
+        }
+
+        .invoice-title p {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        /* --- Billing Info --- */
+        .billing-info {
+            margin-top: 2rem;
+            width: 100%;
+        }
+
+        .billing-info h3 {
+            font-size: 11px;
+            font-weight: bold;
+            color: #4b5563;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            margin-top: 16px;
+        }
+
+        .billing-info p {
+            font-size: 12px;
+            color: #6b7280;
+            margin: 2px 0;
+        }
+        
+        .billing-info .client-name {
+             color: #1f2937;
+             font-weight: bold;
+        }
+
+        .billing-info .details-section {
+            text-align: right;
+        }
+
+        .billing-info .detail-item span {
+            font-weight: bold;
+            color: #374151;
+        }
+
+        /* --- Items Table --- */
+        .items-section {
+            margin-top: 40px;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            margin-top: 16px;
+        }
+
+        .items-table thead {
+            background-color: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .items-table th {
+            padding: 12px 16px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #4b5563;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .items-table tbody tr {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .items-table td {
+            padding: 16px;
+            vertical-align: top;
+        }
+        
+        .items-table .item-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .items-table .item-description {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .items-table .text-center {
+            text-align: center;
+        }
+
+        .items-table .text-right {
+            text-align: right;
+        }
+
+        /* --- Totals Section --- */
+        .totals-section {
+            margin-top: 32px;
+        }
+        
+        .totals-wrapper {
+            float: right;
+            width: 280px;
+        }
+
+        .totals-table {
+            width: 100%;
+        }
+
+        .totals-table td {
+            padding: 8px 0;
+            font-size: 12px;
+        }
+
+        .totals-table .label {
+            color: #4b5563;
+        }
+
+        .totals-table .value {
+            text-align: right;
+            font-weight: bold;
+            color: #1f2937;
+        }
+        
+        .totals-table .divider {
+            border-top: 1px solid #e5e7eb;
+            height: 1px;
+            padding: 0;
+            margin: 8px 0;
+        }
+
+        .totals-table .total-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .totals-table .total-value {
+            text-align: right;
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        /* --- Footer --- */
+        .footer {
+            margin-top: 48px;
+            padding-top: 32px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .footer h4 {
+            font-size: 12px;
+            font-weight: bold;
+            color: #4b5563;
+            margin-bottom: 8px;
+        }
+        
+        .footer .thank-you {
+            text-align: center;
+            margin-top: 16px;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Display any error messages from the controller -->
+    <apex:pageMessages id="errors"/>
+
+    <div class="invoice-container">
+        <!-- Header -->
+        <header class="header">
+            <table class="header-table">
+                <tr>
+                    <td class="company-details">
+                        <h1>Your Company Inc.</h1>
+                        <p>123 Business Lane, Suite 100</p>
+                        <p>City, State, 12345</p>
+                        <p>contact@yourcompany.com</p>
+                    </td>
+                    <td class="invoice-title">
+                        <h2>Invoice</h2>
+                        <p>#{!invoice.Name}</p>
+                    </td>
+                </tr>
+            </table>
+        </header>
+
+        <!-- Billing and Date Info -->
+        <table class="billing-info">
+            <tr>
+                <td style="width: 50%; vertical-align: top;">
+                    <h3>Billed To</h3>
+                    <p class="client-name">{!invoice.Product_Subscriber__r.first_name__c} {!invoice.Product_Subscriber__r.last_name__c}</p>
+                    <p>{!invoice.Product_Subscriber__r.address__c}</p>
+                    <p>{!invoice.Product_Subscriber__r.email__c}</p>
+                </td>
+                <td class="details-section" style="width: 50%; vertical-align: top;">
+                    <h3>Invoice Details</h3>
+                    <p class="detail-item"><span>Invoice Number:</span> {!invoice.Name}</p>
+                    <p class="detail-item"><span>Invoice Date:</span> <apex:outputText value="{0,date,MMMM d, yyyy}"><apex:param value="{!invoice.Start_Date__c}"/></apex:outputText></p>
+                    <p class="detail-item"><span>Due Date:</span> <apex:outputText value="{0,date,MMMM d, yyyy}"><apex:param value="{!invoice.End_Date__c}"/></apex:outputText></p>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Items Table -->
+        <section class="items-section">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">Product / Service</th>
+                        <th class="text-center">Plan</th>
+                        <th class="text-center">Duration</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="item-name">{!invoice.Product_Version__r.Product__r.Name}</div>
+                            <div class="item-description">{!invoice.Product_Version__r.release_notes__c}</div>
+                        </td>
+                        <td class="text-center">{!invoice.Product_Plan__r.Name}</td>
+                        <td class="text-center">{!invoice.duration__c}</td>
+                        <td class="text-right">
+                            <apex:outputText value="{0,number,currency}"><apex:param value="{!invoice.Price__c}"/></apex:outputText>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Total Section -->
+        <section class="totals-section">
+             <div class="totals-wrapper">
+                <table class="totals-table">
+                    <tr>
+                        <td class="label">Subtotal</td>
+                        <td class="value"><apex:outputText value="{0,number,currency}"><apex:param value="{!invoice.Price__c}"/></apex:outputText></td>
+                    </tr>
+                    <tr>
+                        <td class="label">Discount</td>
+                        <td class="value">
+                            <apex:outputText value="{0, number, ##.##'%'}">
+                                <apex:param value="{!IF(invoice.Discount__c != null, invoice.Discount__c , 0)}" />
+                            </apex:outputText>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="divider"></td>
+                    </tr>
+                    <tr>
+                        <td class="total-label">Total Amount</td>
+                        <td class="total-value"><apex:outputText value="{0,number,currency}"><apex:param value="{!invoice.Price_after_Discount__c}"/></apex:outputText></td>
+                    </tr>
+                </table>
+            </div>
+            <div style="clear: both;"></div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <h4>Notes</h4>
+            <p>Please make the payment by the due date. Feel free to contact us for any questions regarding this invoice.</p>
+            <div class="thank-you">
+                <p>Thank you for your business!</p>
+            </div>
+        </footer>
+    </div>
+</body>
+</apex:page>

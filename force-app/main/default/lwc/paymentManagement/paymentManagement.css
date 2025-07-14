@@ -1,0 +1,22 @@
+.container {
+    padding: 1rem;
+}
+
+.custome-bt-product-selection {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.custom-btn {
+    min-width: 150px;
+}
+
+.custom-table-container {
+    position: relative;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}

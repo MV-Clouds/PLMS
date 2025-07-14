@@ -1,0 +1,45 @@
+.container {
+    padding: 1rem;
+}
+
+.custom-modal-container {
+    max-width: 60rem;
+}
+
+.modal-form-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem;
+    border-top: 1px solid #e5e5e5;
+}
+
+.modal-form-body lightning-input+lightning-input,
+.modal-form-body lightning-input+lightning-combobox,
+.modal-form-body lightning-combobox+lightning-input {
+    margin-top: 1rem;
+}
+
+.modal-form-body .slds-form-element__label {
+    font-weight: bold;
+}
+
+.custom-table-container {
+    padding: 10px;
+    position: relative;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.custome-bt-product-selection {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.custom-combo {
+    min-width: 50%;
+}

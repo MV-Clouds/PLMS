@@ -1,0 +1,44 @@
+.container {
+    padding: 1rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.search-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+}
+
+.search-input {
+    flex-grow: 1;
+}
+
+.new-button lightning-button {
+    --sds-c-button-brand-spacing-inline-end: 1rem;
+    --sds-c-button-brand-spacing-inline-start: 1rem;
+}
+
+.custom-btn {
+    min-width: 150px;
+}
+
+.custome-bt-product-selection {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.custom-table-container {
+    position: relative;
+    display: flex;
+    min-height: 300px;
+    flex-direction: column;
+    justify-content: space-between;
+}
