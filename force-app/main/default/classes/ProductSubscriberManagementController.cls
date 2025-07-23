@@ -2,13 +2,13 @@ public with sharing class ProductSubscriberManagementController {
     
     @AuraEnabled
     public static List<Product_Subscriber__c> getProductSubscribers(String productId) {
-        return [SELECT Id, Name, Expiration_DateTime__c,Org_Name__c,Install_Date__c, Is_Trial__c, Product__r.Name, Product_Plan__r.Name ,Product_Version__r.Name , Discount__c, Duration__c FROM Product_Subscriber__c WHERE Product__c = :productId];
+        return [SELECT Id, Name, Expiration_DateTime__c,Org_Name__c,Install_Date__c, Is_Trial__c, Product__r.Name, Product_Plan__r.Name ,Product_Version__r.Name , Discount__c, Duration__c, Version_Number_Text__c FROM Product_Subscriber__c WHERE Product__c = :productId ORDER BY LastModifiedDate DESC];
     }
     
     @AuraEnabled
     public static Product_Subscriber__c updateProductSubscriber(Id subscriberId, Boolean isTrial, Id productPlanId, Decimal discount, Integer duration, Datetime expirationDateTime) {
         try {
-            Product_Subscriber__c subscriber = [SELECT Id, Is_Trial__c, Product_Plan__c, Discount__c, Duration__c, Price__c, Expiration_DateTime__c, Opportunity__c FROM Product_Subscriber__c WHERE Id = :subscriberId];
+            Product_Subscriber__c subscriber = [SELECT Id, Is_Trial__c, Product_Plan__c, Discount__c, Duration__c, Price__c, Expiration_DateTime__c, Opportunity__c, Version_Number_Text__c FROM Product_Subscriber__c WHERE Id = :subscriberId];
             System.debug(' before update subscriber >>' + subscriber);
             
             subscriber.Is_Trial__c = isTrial;

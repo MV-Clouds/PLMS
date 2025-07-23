@@ -1,10 +1,10 @@
 <template>
-    <lightning-card title=" Product Subscriber Management" icon-name="standard:people">
+    <lightning-card title=" Product Subscribers" icon-name="standard:people">
         <div class="container">
             <div class="slds-grid slds-gutters slds-m-bottom_medium">
                 <div class="slds-col slds-size_1-of-2">
-                    <lightning-input type="search" label="Search Subscribers" value={searchKey}
-                        placeholder="Search by name and Expiration date" onchange={handleSearchChange}
+                    <lightning-input type="search" label="Search Product Subscribers" value={searchKey}
+                        placeholder="Search by Org Name and Expiration Date" onchange={handleSearchChange}
                         disabled={isSearchbarDisabled}></lightning-input>
                 </div>
                 <div class="slds-col slds-size_1-of-2 slds-grid slds-gutters custome-bt-product-selection">
@@ -23,7 +23,7 @@
                 <template if:false={isRecords}>
                     <lightning-datatable key-field="Id" data={subscribers} columns={columns}
                         onrowaction={handleRowAction} onsort={handleSort} sorted-by={sortBy}
-                        sorted-direction={sortDirection}></lightning-datatable>
+                        sorted-direction={sortDirection} hide-checkbox-column="true"></lightning-datatable>
                 </template>
 
 
@@ -87,13 +87,13 @@
                                     {selectedSubscriber.installDate}
                                 </div>
                             </div>
-                            <div class="slds-form-element slds-m-bottom_small">
+                            <!-- <div class="slds-form-element slds-m-bottom_small">
                                 <label class="slds-form-element__label">Product Version</label>
                                 <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
                                     <a href={selectedSubscriber.productVersionUrl}
                                         target="_blank">{selectedSubscriber.productVersionName}</a>
                                 </div>
-                            </div>
+                            </div> -->
                             <div class="slds-form-element slds-m-bottom_small">
                                 <label class="slds-form-element__label">Current Expiration Date</label>
                                 <div class="slds-form-element__control slds-border_bottom slds-p-vertical_xx-small">
@@ -135,14 +135,15 @@
                         </div>
                         <footer class="slds-modal__footer modal-footer">
                             <button class="slds-button slds-button_neutral" onclick={closeEditModal}>Cancel</button>
-                            <button class="slds-button slds-button_brand" onclick={handlePreview}>Preview</button>
+                            <!-- <button class="slds-button slds-button_brand" onclick={handlePreview}>Preview</button> -->
+                            <button class="slds-button slds-button_brand" onclick={handleConfirmSave}>Save</button>
                         </footer>
                     </div>
                 </section>
                 <div class="slds-backdrop slds-backdrop_open"></div>
             </template>
 
-            <template if:true={isPreviewModalOpen}>
+            <!-- <template if:true={isPreviewModalOpen}>
                 <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-02" aria-modal="true"
                     aria-describedby="modal-content-id-2" class="slds-modal slds-fade-in-open">
                     <div class="slds-modal__container custom-modal-container">
@@ -261,7 +262,7 @@
                     </div>
                 </section>
                 <div class="slds-backdrop slds-backdrop_open"></div>
-            </template>
+            </template> -->
         </div>
     </lightning-card>
 </template>

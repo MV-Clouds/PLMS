@@ -1,9 +1,9 @@
 <template>
-    <lightning-card title="Payment Management" icon-name="standard:payment_gateway">
+    <lightning-card title="Payments" icon-name="standard:payment_gateway">
         <div class="container">
             <div class="slds-grid slds-gutters slds-m-bottom_medium">
                 <div class="slds-col slds-size_1-of-2">
-                    <lightning-input type="search" label="Search" value={searchTerm} placeholder="name, invoice, method and transaction id"
+                    <lightning-input type="search" label="Search Payments" value={searchTerm} placeholder="Search by Name, Invoice, Method and TransactionId"
                         onchange={handleSearchTermChange} disabled={isSearchbarDisabled}></lightning-input>
                 </div>
                 <div class="slds-col slds-size_1-of-2 slds-grid slds-gutters custome-bt-product-selection">

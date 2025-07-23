@@ -4,7 +4,6 @@ import getProductSubscribers from '@salesforce/apex/ProductSubscriberManagementC
 import updateProductSubscriber from '@salesforce/apex/ProductSubscriberManagementController.updateProductSubscriber';
 import getProductPlans from '@salesforce/apex/ProductSubscriberManagementController.getProductPlans';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import Price from '@salesforce/schema/Asset.Price';
 
 const columns = [
     { label: 'Name', fieldName: 'subNameUrl', typeAttributes: {
@@ -18,10 +17,10 @@ const columns = [
         label: { fieldName: 'productPlanName' }, 
         target: '_blank'
       }, type: 'url', sortable: true },
-    { label: 'Product Version', fieldName: 'productVersionNameUrl', typeAttributes: {
-        label: { fieldName: 'productVersionName' }, 
-        target: '_blank'
-      }, type: 'url', sortable: true },
+    // { label: 'Product Version', fieldName: 'productVersionNameUrl', typeAttributes: {
+    //     label: { fieldName: 'productVersionName' }, 
+    //     target: '_blank'
+    //   }, type: 'url', sortable: true },
     { label: 'Expiration DateTime', fieldName: 'Expiration_DateTime__c', type: 'date', sortable: true, typeAttributes: {
         day: 'numeric',
         month: 'numeric',
@@ -125,18 +124,18 @@ export default class ProductSubscriberManagement extends LightningElement {
                 subNameUrl: `/lightning/r/${record.Id}/view`,
                 productPlanName: record.Product_Plan__r ? record.Product_Plan__r.Name : '',
                 productPlanUrl: record.Product_Plan__c ? `/lightning/r/${record.Product_Plan__c}/view` : '',
-                productVersionName: record.Product_Version__r ? record.Product_Version__r.Name : '',
-                productVersionNameUrl: record.Product_Version__c ? `/lightning/r/${record.Product_Version__c}/view` : ''
+                // productVersionName: record.Product_Version__r ? record.Product_Version__r.Name : '',
+                // productVersionNameUrl: record.Product_Version__c ? `/lightning/r/${record.Product_Version__c}/view` : ''
             }));
             if (this.searchKey) {
                 const searchLower = this.searchKey.toLowerCase();
                 records = records.filter(record => {
-                const nameMatch = record.Name && record.Name.toLowerCase().includes(searchLower);
-                const dateMatch = record.Expiration_DateTime__c && record.Expiration_DateTime__c.toLowerCase().includes(searchLower);
-                return nameMatch || dateMatch;
+                    const nameMatch = record.Name && record.Name.toLowerCase().includes(searchLower);
+                    const orgNameMatch = record.Org_Name__c && record.Org_Name__c.toLowerCase().includes(searchLower);
+                    const dateMatch = record.Expiration_DateTime__c && record.Expiration_DateTime__c.toLowerCase().includes(searchLower);
+                    return nameMatch || dateMatch || orgNameMatch;
                 });
             }
-
 
             records.sort((a, b) => {
                 let aValue = a[this.sortBy];
@@ -180,8 +179,6 @@ export default class ProductSubscriberManagement extends LightningElement {
             console.log('search called' + this.searchKey);
             this.processRecords();
         }, 300);
-        
-        
     }
 
     handleSort(event) {
@@ -235,9 +232,9 @@ export default class ProductSubscriberManagement extends LightningElement {
                 productName: row.Product__r && row.Product__r.Name ? row.Product__r.Name : 'NA',
                 name: row.Name ? row.Name : 'NA',
                 expirationDate: row.Expiration_DateTime__c ? row.Expiration_DateTime__c : 'NA',
-                productVersionName: row.Product_Version__r && row.Product_Version__r.Name ? row.Product_Version__r.Name : '',
-                productVersionUrl: row.Product_Version__c ? `${orgDomain}/lightning/r/${row.Product_Version__c}/view` : '',
-                isproductVersionUrl : row.Product_Version__c ? true : false,
+                // productVersionName: row.Product_Version__r && row.Product_Version__r.Name ? row.Product_Version__r.Name : '',
+                // productVersionUrl: row.Product_Version__c ? `${orgDomain}/lightning/r/${row.Product_Version__c}/view` : '',
+                // isproductVersionUrl : row.Product_Version__c ? true : false,
                 orgName: row.Org_Name__c ? row.Org_Name__c : 'NA',
                 installDate: row.Install_Date__c ? row.Install_Date__c : 'NA',
             };
@@ -310,79 +307,89 @@ export default class ProductSubscriberManagement extends LightningElement {
         }
     }
 
-    handlePreview() {
+    handleConfirmSave() {
         const allValid = [...this.template.querySelectorAll('lightning-input, lightning-combobox')]
             .reduce((validSoFar, inputCmp) => {
                 inputCmp.reportValidity();
                 return validSoFar && inputCmp.checkValidity();
             }, true);
-
+    
+        this.isLoading = true;
+        
         if (allValid) {
-            this.previewSubscriber = {
-                id: this.selectedSubscriber.id,
-                productName: this.selectedSubscriber.productName,
-                name: this.selectedSubscriber.name,
+            updateProductSubscriber({
+                subscriberId: this.selectedSubscriber.id,
                 isTrial: this.isTrial,
                 productPlanId: this.productPlanId,
-                productPlanName: this.planOptions.find(plan => plan.value === this.productPlanId)?.label,
-                productVersionName : this.selectedSubscriber.productVersionName,
-                productVersionUrl: this.selectedSubscriber.productVersionUrl,
-                orgName: this.selectedSubscriber.orgName,
-                installDate: this.selectedSubscriber.installDate,
                 discount: this.discount,
                 duration: this.duration,
-                originalExpirationDate: this.selectedSubscriber.expirationDate,
-                newExpirationDateTime: this.newExpirationDateTime,
-                price: this.productPlanPrice,
-                discountprice : (this.productPlanPrice - (this.productPlanPrice * (this.discount / 100))).toFixed(2)
-            };
-            this.isEditModalOpen = false;
-            this.isPreviewModalOpen = true;
+                expirationDateTime: this.newExpirationDateTime,
+            })
+                .then(() => {
+                    this.dispatchEvent(
+                        new ShowToastEvent({
+                            title: 'Success',
+                            message: 'Product subscriber updated successfully',
+                            variant: 'success',
+                        })
+                    );
+                    this.closePreviewModal();
+                    this.loadProductSubscribers(); // Refresh data after update
+                })
+                .catch(error => {
+                    this.dispatchEvent(
+                        new ShowToastEvent({
+                            title: 'Error updating record',
+                            message: error.body.message,
+                            variant: 'error',
+                        })
+                    );
+                }).finally(()=>{
+                    this.isLoading = false;
+                    this.isEditModalOpen = false;
+                });
+        } else {
+            this.isLoading = false;
         }
     }
 
-    closePreviewModal() {
-        this.isPreviewModalOpen = false;
-    }
+    // handlePreview() {
+    //     const allValid = [...this.template.querySelectorAll('lightning-input, lightning-combobox')]
+    //         .reduce((validSoFar, inputCmp) => {
+    //             inputCmp.reportValidity();
+    //             return validSoFar && inputCmp.checkValidity();
+    //         }, true);
 
-    editFromPreview() {
-        this.closePreviewModal();
-        this.isEditModalOpen = true;
-    }
+    //     if (allValid) {
+    //         this.previewSubscriber = {
+    //             id: this.selectedSubscriber.id,
+    //             productName: this.selectedSubscriber.productName,
+    //             name: this.selectedSubscriber.name,
+    //             isTrial: this.isTrial,
+    //             productPlanId: this.productPlanId,
+    //             productPlanName: this.planOptions.find(plan => plan.value === this.productPlanId)?.label,
+    //             // productVersionName : this.selectedSubscriber.productVersionName,
+    //             // productVersionUrl: this.selectedSubscriber.productVersionUrl,
+    //             orgName: this.selectedSubscriber.orgName,
+    //             installDate: this.selectedSubscriber.installDate,
+    //             discount: this.discount,
+    //             duration: this.duration,
+    //             originalExpirationDate: this.selectedSubscriber.expirationDate,
+    //             newExpirationDateTime: this.newExpirationDateTime,
+    //             price: this.productPlanPrice,
+    //             discountprice : (this.productPlanPrice - (this.productPlanPrice * (this.discount / 100))).toFixed(2)
+    //         };
+    //         this.isEditModalOpen = false;
+    //         this.isPreviewModalOpen = true;
+    //     }
+    // }
 
-    handleConfirmSave() {
+    // closePreviewModal() {
+    //     this.isPreviewModalOpen = false;
+    // }
 
-        this.isLoading = true;
-
-        updateProductSubscriber({
-            subscriberId: this.selectedSubscriber.id,
-            isTrial: this.isTrial,
-            productPlanId: this.productPlanId,
-            discount: this.discount,
-            duration: this.duration,
-            expirationDateTime: this.newExpirationDateTime,
-        })
-            .then(() => {
-                this.dispatchEvent(
-                    new ShowToastEvent({
-                        title: 'Success',
-                        message: 'Product subscriber updated successfully',
-                        variant: 'success',
-                    })
-                );
-                this.closePreviewModal();
-                this.loadProductSubscribers(); // Refresh data after update
-            })
-            .catch(error => {
-                this.dispatchEvent(
-                    new ShowToastEvent({
-                        title: 'Error updating record',
-                        message: error.body.message,
-                        variant: 'error',
-                    })
-                );
-            }).finally(()=>{
-                this.isLoading = false;
-            });
-    }
+    // editFromPreview() {
+    //     this.closePreviewModal();
+    //     this.isEditModalOpen = true;
+    // }
 }

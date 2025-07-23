@@ -44,14 +44,14 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
                         newInstallData.Is_Trial__c = true;
                         newInstallData.Install_Date__c = System.today();
                         newInstallData.Active__c = true;
-
-                        List<Product_Version__c> productVersionRecs = [SELECT Id, Version_Number__c FROM Product_Version__c WHERE Version_Number__c = :newInstallData.Version_Number_Text__c AND Product__c = :productRecs[0].Id LIMIT 1];
-                        if(!productVersionRecs.isEmpty()){
-                            newInstallData.Product_Version__c = productVersionRecs[0].Id;
-                        } else {
-                            sendEmail(productRecs[0], newInstallData);
-                        }
                         insert newInstallData;
+
+                        // List<Product_Version__c> productVersionRecs = [SELECT Id, Version_Number__c FROM Product_Version__c WHERE Version_Number__c = :newInstallData.Version_Number_Text__c AND Product__c = :productRecs[0].Id LIMIT 1];
+                        // if(!productVersionRecs.isEmpty()){
+                        //     newInstallData.Product_Version__c = productVersionRecs[0].Id;
+                        // } else {
+                        //     sendEmail(productRecs[0], newInstallData);
+                        // }
         
                         Opportunity opp = new Opportunity();
                         opp.Name = newInstallData.Installed_Product__c + ' New Install' + ' - ' + Date.valueOf(System.today()) + ' - ' + newInstallData.Org_Name__c;
@@ -126,16 +126,17 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
                     System.debug('productSubscriberRec size ' + productSubscriberRec.size());
     
                     if(!productSubscriberRec.isEmpty()){
-                        List<Product_Version__c> productVersionRecs = [SELECT Id, Version_Number__c FROM Product_Version__c WHERE Version_Number__c = :newInstallData.Version_Number_Text__c AND Product__c = :productId LIMIT 1];
-                        if(!productVersionRecs.isEmpty()){
-                            productSubscriberRec[0].Version_Number_Text__c = newInstallData.Version_Number_Text__c;
-                            productSubscriberRec[0].Product_Version__c = productVersionRecs[0].Id;
-                            productSubscriberRec[0].Last_Upgrade_Date__c = System.today();
-                            update productSubscriberRec[0];
-                        }
-                    } else {
-                        sendEmail(productRecs[0], newInstallData);
-                    }
+                        productSubscriberRec[0].Version_Number_Text__c = newInstallData.Version_Number_Text__c;
+                        productSubscriberRec[0].Last_Upgrade_Date__c = System.today();
+                        update productSubscriberRec[0];
+                        // List<Product_Version__c> productVersionRecs = [SELECT Id, Version_Number__c FROM Product_Version__c WHERE Version_Number__c = :newInstallData.Version_Number_Text__c AND Product__c = :productId LIMIT 1];
+                        // if(!productVersionRecs.isEmpty()){
+                        //     productSubscriberRec[0].Product_Version__c = productVersionRecs[0].Id;
+                        // }
+                    } 
+                    // else {
+                    //     sendEmail(productRecs[0], newInstallData);
+                    // }
                 }
             }
 
@@ -146,25 +147,25 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
         }
     }
 
-    public static void sendEmail(Product__c productRecs, Product_Subscriber__c newInstallData) {
-        try {
-            List<String> emails = new List<String>{'dharmik@mvclouds.com'};
-            if(productRecs.Support_Developer_Email__c != null){
-                String supportEmail = productRecs.Support_Developer_Email__c;
-                if(!emails.contains(supportEmail)){
-                    emails.add(supportEmail);
-                }
-            }
-            string[] to = emails;
+    // public static void sendEmail(Product__c productRecs, Product_Subscriber__c newInstallData) {
+    //     try {
+    //         List<String> emails = new List<String>{'dharmik@mvclouds.com'};
+    //         if(productRecs.Support_Developer_Email__c != null){
+    //             String supportEmail = productRecs.Support_Developer_Email__c;
+    //             if(!emails.contains(supportEmail)){
+    //                 emails.add(supportEmail);
+    //             }
+    //         }
+    //         string[] to = emails;
             
-            Messaging.SingleEmailMessage sendemail = new Messaging.SingleEmailMessage();
-            sendemail.setToAddresses(to);
-            sendemail.setSubject('Someone has installed the ' + newInstallData.Installed_Product__c + ' package for which Package Version is not available in the PLMS org');
-            sendemail.setHtmlBody('<div style="font-family:Verdana;">Hello Team,<br/>' + 'Someone has installed the ' + newInstallData.Installed_Product__c + ' package for which Package Version is not available in the PLMS org. <br/> Package Version Number : ' + newInstallData.Version_Number_Text__c + '<br/><br/></div>');
-            Messaging.sendEmail(new Messaging.SingleEmailMessage[] { sendemail });
-        } catch (Exception e) {
-            System.debug('Error in sendEmail :: ' + e.getMessage());
-        }
-    }
+    //         Messaging.SingleEmailMessage sendemail = new Messaging.SingleEmailMessage();
+    //         sendemail.setToAddresses(to);
+    //         sendemail.setSubject('Someone has installed the ' + newInstallData.Installed_Product__c + ' package for which Package Version is not available in the PLMS org');
+    //         sendemail.setHtmlBody('<div style="font-family:Verdana;">Hello Team,<br/>' + 'Someone has installed the ' + newInstallData.Installed_Product__c + ' package for which Package Version is not available in the PLMS org. <br/> Package Version Number : ' + newInstallData.Version_Number_Text__c + '<br/><br/></div>');
+    //         Messaging.sendEmail(new Messaging.SingleEmailMessage[] { sendemail });
+    //     } catch (Exception e) {
+    //         System.debug('Error in sendEmail :: ' + e.getMessage());
+    //     }
+    // }
 //The Email Service Email for now is : newinstalldata@xu3km95o0v0e1sqwtcmzhpgmxtfy170b801sod3wb4o19psz0.dm-fn77nuab.ind136.apex.salesforce.com
 }
