@@ -2,7 +2,7 @@ public with sharing class ProductSubscriberManagementController {
     
     @AuraEnabled
     public static List<Product_Subscriber__c> getProductSubscribers(String productId) {
-        return [SELECT Id, Name, Expiration_DateTime__c,Org_Name__c,Install_Date__c, Is_Trial__c, Product__r.Name, Product_Plan__r.Name ,Product_Version__r.Name , Discount__c, Duration__c, Version_Number_Text__c FROM Product_Subscriber__c WHERE Product__c = :productId ORDER BY LastModifiedDate DESC];
+        return [SELECT Id, Name, Expiration_DateTime__c,Org_Name__c,Install_Date__c, Is_Trial__c, Product__r.Name, Product_Plan__r.Name ,Product_Version__r.Name , Discount__c, Duration__c, Version_Number_Text__c, Org_Type__c, Org_Id__c FROM Product_Subscriber__c WHERE Product__c = :productId ORDER BY LastModifiedDate DESC];
     }
     
     @AuraEnabled
