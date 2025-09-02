@@ -1,14 +1,21 @@
 /**
  * Class Name: NewInstallDataController
- * Test Class: -
+ * Test Class: - NewInstallDataControllerTest
  * @description: Used to handle the emails and store the org data
  * ****************************************************************
  * @Note: This class is not to be added to the package, it's for the handler org only
  * ****************************************************************
  * Created Date: 1 July, 2025
  * Created By: Harsh Gandhi
+ * Last Modified Date: 2 September, 2025
+ * Last Modified By: Harsh Gandhi
+ * ****************************************************************
+ * Modification Log:
+ * 2 September, 2025 - Harsh Gandhi - Updated class to create account, contact, account organization, product susbscriber and version records on install and on upgrade creating new product version records
+ * ****************************************************************
 */
 public with sharing class NewInstallDataController implements Messaging.InboundEmailHandler{
+    
     /*
     *********************************************************
     @description     : Method is used to handle the emails and store the org data
@@ -19,151 +26,128 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
     */
     public Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email, Messaging.InboundEnvelope envelope) {
         try {
-            System.debug('email :: ' + email);
             Messaging.InboundEmailResult result = new Messaging.InboundEmailResult();
             String emailBody = email.htmlBody;
             System.debug('emailBody ' + emailBody);
+
+            // Extract data which needs to be used and package action from the email body
             String backendUseData = emailBody.substringAfter('<|--- BackEnd Use Only Data Start ---|>').substringBefore('<|--- BackEnd Use Only Data End ---|>');
             String packageAction = emailBody.substringAfter('<|--- Package Action Start ---|>').substringBefore('<|--- Package Action End ---|>');
 
             System.debug('packageAction ' + packageAction);
             System.debug('backendUseData ' + backendUseData);
 
-            if(packageAction == 'Install' && backendUseData != null && backendUseData != '') {
-                Product_Subscriber__c newInstallData = (Product_Subscriber__c) JSON.deserialize(backendUseData, Product_Subscriber__c.class);
-                System.debug('newInstallData ' + newInstallData);
-                
-                if(newInstallData.Org_Id__c != null){
-                    List<Product__c> productRecs = [SELECT Id FROM Product__c WHERE Name = :newInstallData.Installed_Product__c LIMIT 1];
-                    System.debug('productRecs size ' + productRecs.size());
+            // Extract product subscriber data wrapper
+            Product_Subscriber__c newInstallData = (Product_Subscriber__c) JSON.deserialize(backendUseData, Product_Subscriber__c.class);
+            System.debug('newInstallData ' + newInstallData);
 
-                    if(!productRecs.isEmpty()){
-                        System.debug('productId ' + productRecs[0].Id);
-    
-                        newInstallData.Product__c = productRecs[0].Id;
-                        newInstallData.Is_Trial__c = true;
-                        newInstallData.Install_Date__c = System.today();
-                        newInstallData.Active__c = true;
+            // Fetch related account and contact record, create new if not found
+            List<Account> accountRecs = [SELECT Id FROM Account WHERE Name = :newInstallData.Org_Name__c LIMIT 1];
+            Account orgAccount = new Account();
+            Contact orgContact = new Contact();
+            if(accountRecs.isEmpty()){
+                orgAccount.Name = newInstallData.Org_Name__c;
+                orgAccount.Email__c = newInstallData.Email__c;
+                orgAccount.Phone = newInstallData.Phone__c;
+                insert orgAccount;
 
-                        List<Product_Version__c> productVersionRecs = [SELECT Id, Version_Number__c FROM Product_Version__c WHERE Version_Number__c = :newInstallData.Version_Number_Text__c AND Product__c = :productRecs[0].Id LIMIT 1];
-                        if(!productVersionRecs.isEmpty()){
-                            newInstallData.Product_Version__c = productVersionRecs[0].Id;
-                        } else {
-                            sendEmail(productRecs[0], newInstallData);
-                        }
-                        insert newInstallData;
-        
-                        Opportunity opp = new Opportunity();
-                        opp.Name = newInstallData.Installed_Product__c + ' New Install' + ' - ' + Date.valueOf(System.today()) + ' - ' + newInstallData.Org_Name__c;
-                        opp.CloseDate = Date.valueOf(newInstallData.Expiration_DateTime__c);
-                        opp.StageName = 'New';
-                        opp.Product_Subscriber__c = newInstallData.Id;
-                        insert opp;
-                        System.debug('Opportunity created with Id: ' + opp.Id);
-        
-                        Product_Subscriber__c productSubscriber = [SELECT Id, Environment__c, Org_Id__c, Org_Name__c, Email__c, First_Name__c, Last_Name__c, Phone__c, Mobile_Phone__c FROM Product_Subscriber__c WHERE Id = :newInstallData.Id LIMIT 1];
-                        productSubscriber.Opportunity__c = opp.Id;
-                        List<Lead> leadRecs = [SELECT Id, Email, FirstName, LastName, Company FROM Lead WHERE Email = :newInstallData.Email__c LIMIT 1];
-                        System.debug('leadRecs ' + leadRecs);
-    
-                        if(leadRecs.size() > 0){
-                            productSubscriber.Lead__c = leadRecs[0].Id;
-                        } else {
-                            Lead leadRec = new Lead();
-                            leadRec.FirstName = productSubscriber.First_Name__c;
-                            leadRec.LastName = productSubscriber.Last_Name__c;
-                            leadRec.Company = productSubscriber.Org_Id__c;
-                            leadRec.Company_Name__c = productSubscriber.Org_Name__c;
-                            leadRec.Email = productSubscriber.Email__c;
-                            leadRec.Phone = productSubscriber.Phone__c;
-                            leadRec.MobilePhone = productSubscriber.Mobile_Phone__c;
-                            leadRec.LeadSource = productSubscriber.Environment__c == 'Sandbox' ? 'Product Installation - Sandbox"' : 'Product Installation';
-                            insert leadRec;
-        
-                            productSubscriber.Lead__c = leadRec.Id;
-                        }
-                        update productSubscriber;
-        
-                        Task newTask = new Task();
-                        newTask.ActivityDate = Date.today();
-                        newTask.Subject = email.subject;
-                        newTask.description = emailBody;
-                        newTask.WhatId = newInstallData.Id;
-                        newTask.Status = 'Completed';
-                        insert as User newTask;
-                    }
+                orgContact.LastName = newInstallData.Org_Name__c;
+                orgContact.AccountId = orgAccount.Id;
+                orgContact.Email = newInstallData.Email__c;
+                orgContact.Phone = newInstallData.Phone__c;
+                orgContact.MobilePhone = newInstallData.Mobile_Phone__c;
+                insert orgContact;
+            } else {
+                orgAccount = accountRecs[0];
+                List<Contact> accountRelatedCon = [SELECT Id, LastName, Email, Phone, MobilePhone FROM Contact WHERE AccountId = :orgAccount.Id LIMIT 1];
+                if(accountRelatedCon.size() > 0){
+                    orgContact = accountRelatedCon[0];
                 }
-            } else if(packageAction == 'Uninstall'){
-                Product_Subscriber__c newInstallData = (Product_Subscriber__c) JSON.deserialize(backendUseData, Product_Subscriber__c.class);
-                List<Product__c> productRecs = [SELECT Id FROM Product__c WHERE Name = :newInstallData.Installed_Product__c LIMIT 1];
-                System.debug('productRecs size ' + productRecs.size());
+            }
+
+            // Find Account related Organization record
+            List<Organization__c> accountOrgs = [SELECT Id, Name FROM Organization__c WHERE Account__c = :orgAccount.Id AND Name = :newInstallData.Environment__c LIMIT 1];
+            Organization__c orgRec = new Organization__c();
+            if(accountOrgs.isEmpty()){
+                orgRec.Name = newInstallData.Environment__c;
+                orgRec.Account__c = orgAccount.Id;
+                insert orgRec;
+            } else {
+                orgRec = accountOrgs[0];
+            }
+
+            List<Product__c> productRecs = [SELECT Id FROM Product__c WHERE Name = :newInstallData.Installed_Product__c LIMIT 1];
+            System.debug('productRecs size ' + productRecs.size());
+
+            // Package Action = Install
+            if(packageAction == 'Install' && backendUseData != null && backendUseData != '' && !productRecs.isEmpty()) {
+                // Populate necessary fields for product subscriber record
+                newInstallData.Product__c = productRecs[0].Id;
+                newInstallData.Is_Trial__c = true;
+                newInstallData.Install_Date__c = System.today();
+                newInstallData.Last_Upgrade_Date__c = System.today();
+                newInstallData.Active__c = true;
+                newinstalldata.Organization__c = orgRec.Id;
+                newInstallData.Account__c = orgAccount.Id;
+                newInstallData.Contact__c = orgContact.Id;
+                insert newInstallData;
+
+                // Create product version record
+                Product_Version__c productVersion = new Product_Version__c();
+                productVersion.Product__c = productRecs[0].Id;
+                productVersion.Name = newInstallData.Installed_Product__c + ' ' + newInstallData.Version_Number_Text__c;
+                productVersion.Version_Number__c = newInstallData.Version_Number_Text__c;
+                productVersion.Product_Subscriber__c = newInstallData.Id;
+                productVersion.Installed_Date__c = System.now();
+                insert productVersion;
+            } 
+            
+            // Package Action = Uninstall
+            else if(packageAction == 'Uninstall' && backendUseData != null && backendUseData != '' && !productRecs.isEmpty()){
+                String productId = productRecs[0].Id;
+                String orgId = newInstallData.Org_Id__c;
                 
-                if(!productRecs.isEmpty()){
-                    String productId = productRecs[0].Id;
-                    String orgId = newInstallData.Org_Id__c;
-                    List<Product_Subscriber__c> productSubscriberRec = [SELECT Id, Org_Id__c, Active__c, Opportunity__c FROM Product_Subscriber__c WHERE Product__c = :productId AND Org_Id__c = :orgId AND Active__c = true LIMIT 1];
-                    System.debug('productSubscriberRec size ' + productSubscriberRec.size());
-    
-                    if(!productSubscriberRec.isEmpty()){
-                        if(productSubscriberRec[0].Opportunity__c != null){
-                            Opportunity oppRec = [SELECT Id FROM Opportunity WHERE Id = :productSubscriberRec[0].Opportunity__c];
-                            oppRec.StageName = 'Closed Lost';
-                            update oppRec;
-                        }
-                        productSubscriberRec[0].Active__c = false;
-                        update productSubscriberRec[0];
-                    }
+                // Fetch product subscriber record and mark it as inactive
+                List<Product_Subscriber__c> productSubscriberRec = [SELECT Id, Org_Id__c, Active__c FROM Product_Subscriber__c WHERE Product__c = :productId AND Org_Id__c = :orgId AND Active__c = true LIMIT 1];
+                System.debug('productSubscriberRec size ' + productSubscriberRec.size());
+
+                if(!productSubscriberRec.isEmpty()){
+                    productSubscriberRec[0].Uninstall_Date__c = System.today();
+                    productSubscriberRec[0].Active__c = false;
+                    update productSubscriberRec[0];
                 }
-            } else if(packageAction == 'Upgrade'){
-                Product_Subscriber__c newInstallData = (Product_Subscriber__c) JSON.deserialize(backendUseData, Product_Subscriber__c.class);
-                List<Product__c> productRecs = [SELECT Id, Support_Developer_Email__c FROM Product__c WHERE Name = :newInstallData.Installed_Product__c LIMIT 1];
-                System.debug('productRecs size ' + productRecs.size());
-                
-                if(!productRecs.isEmpty()){
-                    String productId = productRecs[0].Id;
-                    String orgId = newInstallData.Org_Id__c;
-                    List<Product_Subscriber__c> productSubscriberRec = [SELECT Id, Org_Id__c, Active__c, Product_Version__c FROM Product_Subscriber__c WHERE Product__c = :productId AND Org_Id__c = :orgId AND Active__c = true LIMIT 1];
-                    System.debug('productSubscriberRec size ' + productSubscriberRec.size());
-    
-                    if(!productSubscriberRec.isEmpty()){
-                        List<Product_Version__c> productVersionRecs = [SELECT Id, Version_Number__c FROM Product_Version__c WHERE Version_Number__c = :newInstallData.Version_Number_Text__c AND Product__c = :productId LIMIT 1];
-                        if(!productVersionRecs.isEmpty()){
-                            productSubscriberRec[0].Version_Number_Text__c = newInstallData.Version_Number_Text__c;
-                            productSubscriberRec[0].Product_Version__c = productVersionRecs[0].Id;
-                            productSubscriberRec[0].Last_Upgrade_Date__c = System.today();
-                            update productSubscriberRec[0];
-                        }
-                    } else {
-                        sendEmail(productRecs[0], newInstallData);
-                    }
-                }
+            } 
+            
+            // Package Action = Upgrade
+            else if(packageAction == 'Upgrade' && backendUseData != null && backendUseData != '' && !productRecs.isEmpty()){
+                String productId = productRecs[0].Id;
+                String orgId = newInstallData.Org_Id__c;
+
+                // Fetch product subscriber record
+                List<Product_Subscriber__c> productSubscriberRec = [SELECT Id, Org_Id__c, Active__c, Product_Version__c FROM Product_Subscriber__c WHERE Product__c = :productId AND Org_Id__c = :orgId AND Active__c = true LIMIT 1];
+                System.debug('productSubscriberRec size ' + productSubscriberRec.size());
+
+                if(!productSubscriberRec.isEmpty()){
+                    // Update product subscriber record
+                    productSubscriberRec[0].Version_Number_Text__c = newInstallData.Version_Number_Text__c;
+                    productSubscriberRec[0].Last_Upgrade_Date__c = System.today();
+                    update productSubscriberRec[0];
+
+                    // Create product version record
+                    Product_Version__c productVersion = new Product_Version__c();
+                    productVersion.Product__c = productRecs[0].Id;
+                    productVersion.Name = newInstallData.Installed_Product__c + ' ' + newInstallData.Version_Number_Text__c;
+                    productVersion.Version_Number__c = newInstallData.Version_Number_Text__c;
+                    productVersion.Product_Subscriber__c = newInstallData.Id;
+                    productVersion.Installed_Date__c = System.now();
+                    insert productVersion;
+                } 
             }
 
             return result;
         } catch (Exception e) {
             System.debug('Error in handleInboundEmail :: ' + e.getMessage());
             return null;
-        }
-    }
-
-    public static void sendEmail(Product__c productRecs, Product_Subscriber__c newInstallData) {
-        try {
-            List<String> emails = new List<String>{'dharmik@mvclouds.com'};
-            if(productRecs.Support_Developer_Email__c != null){
-                String supportEmail = productRecs.Support_Developer_Email__c;
-                if(!emails.contains(supportEmail)){
-                    emails.add(supportEmail);
-                }
-            }
-            string[] to = emails;
-            
-            Messaging.SingleEmailMessage sendemail = new Messaging.SingleEmailMessage();
-            sendemail.setToAddresses(to);
-            sendemail.setSubject('Someone has installed the ' + newInstallData.Installed_Product__c + ' package for which Package Version is not available in the PLMS org');
-            sendemail.setHtmlBody('<div style="font-family:Verdana;">Hello Team,<br/>' + 'Someone has installed the ' + newInstallData.Installed_Product__c + ' package for which Package Version is not available in the PLMS org. <br/> Package Version Number : ' + newInstallData.Version_Number_Text__c + '<br/><br/></div>');
-            Messaging.sendEmail(new Messaging.SingleEmailMessage[] { sendemail });
-        } catch (Exception e) {
-            System.debug('Error in sendEmail :: ' + e.getMessage());
         }
     }
 //The Email Service Email for now is : newinstalldata@xu3km95o0v0e1sqwtcmzhpgmxtfy170b801sod3wb4o19psz0.dm-fn77nuab.ind136.apex.salesforce.com
