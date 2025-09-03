@@ -41,28 +41,16 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
             Product_Subscriber__c newInstallData = (Product_Subscriber__c) JSON.deserialize(backendUseData, Product_Subscriber__c.class);
             System.debug('newInstallData ' + newInstallData);
 
-            // Fetch related account and contact record, create new if not found
+            // Fetch related account, create new if not found
             List<Account> accountRecs = [SELECT Id FROM Account WHERE Name = :newInstallData.Org_Name__c LIMIT 1];
             Account orgAccount = new Account();
-            Contact orgContact = new Contact();
             if(accountRecs.isEmpty()){
                 orgAccount.Name = newInstallData.Org_Name__c;
                 orgAccount.Email__c = newInstallData.Email__c;
                 orgAccount.Phone = newInstallData.Phone__c;
                 insert orgAccount;
-
-                orgContact.LastName = newInstallData.Org_Name__c;
-                orgContact.AccountId = orgAccount.Id;
-                orgContact.Email = newInstallData.Email__c;
-                orgContact.Phone = newInstallData.Phone__c;
-                orgContact.MobilePhone = newInstallData.Mobile_Phone__c;
-                insert orgContact;
             } else {
                 orgAccount = accountRecs[0];
-                List<Contact> accountRelatedCon = [SELECT Id, LastName, Email, Phone, MobilePhone FROM Contact WHERE AccountId = :orgAccount.Id LIMIT 1];
-                if(accountRelatedCon.size() > 0){
-                    orgContact = accountRelatedCon[0];
-                }
             }
 
             // Find Account related Organization record
@@ -89,7 +77,6 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
                 newInstallData.Active__c = true;
                 newinstalldata.Organization__c = orgRec.Id;
                 newInstallData.Account__c = orgAccount.Id;
-                newInstallData.Contact__c = orgContact.Id;
                 insert newInstallData;
 
                 // Create product version record
