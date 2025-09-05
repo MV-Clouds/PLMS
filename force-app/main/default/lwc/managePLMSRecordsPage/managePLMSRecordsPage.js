@@ -1,13 +1,14 @@
 import { LightningElement, track } from 'lwc';
 import searchAccounts from '@salesforce/apex/ManagePLMSRecordsPageController.searchAccounts';
 import getOrganizationsByAccount from '@salesforce/apex/ManagePLMSRecordsPageController.getOrganizationsByAccount';
-import getOrganizationById from '@salesforce/apex/ManagePLMSRecordsPageController.getOrganizationById';
 import getProductSubscribersByOrganization from '@salesforce/apex/ManagePLMSRecordsPageController.getProductSubscribersByOrganization';
 import getInvoicesByOrganization from '@salesforce/apex/ManagePLMSRecordsPageController.getInvoicesByOrganization';
 import getProductVersionsBySubscriber from '@salesforce/apex/ManagePLMSRecordsPageController.getProductVersionsBySubscriber';
 import getProductSubscriberById from '@salesforce/apex/ManagePLMSRecordsPageController.getProductSubscriberById';
 import updateProductSubscriberExpiry from '@salesforce/apex/ManagePLMSRecordsPageController.updateProductSubscriberExpiry';
 import updateProductSubscriberPlan from '@salesforce/apex/ManagePLMSRecordsPageController.updateProductSubscriberPlan';
+import getProductPlansByProduct from '@salesforce/apex/ManagePLMSRecordsPageController.getProductPlansByProduct';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 const DEBOUNCE_MS = 300;
 const PAGE_STEPS = { 
@@ -52,15 +53,17 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 	@track durationMonths = '';
 	@track currentExpiryDate = '';
 	@track newExpiryPreview = '';
+	@track currentIsTrial ;
 	@track selectedProductPlanId = '';
-	@track productPlanOptions = [
-					{ label: 'Basic Plan', value: 'basic-plan-id' },
-					{ label: 'Premium Plan', value: 'premium-plan-id' , isSelected: true },
-					{ label: 'Enterprise Plan', value: 'enterprise-plan-id' },
-					{ label: 'Trial Plan', value: 'trial-plan-id' }
-				];;
+	@track oldselectedProductPlanId = '';
+	@track productPlanOptions = [];
 	@track currentProductPlan = '';
+	@track currentProductPlanPrice = '';
+	@track selectedProductPlanName = '';
+	@track selectedProductPlanPrice = '';
 	@track productPlanLoading = false;
+	@track productPlanSaving = false;
+	@track expirySaving = false;
 	
 	debounceId;
 
@@ -118,6 +121,15 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 	
 	get hasProductVersions() {
 		return Array.isArray(this.productVersions) && this.productVersions.length > 0;
+	}
+	
+	get organizationsWithClass() {
+		return this.organizations.map(org => ({
+			...org,
+			className: this.selectedOrganization && this.selectedOrganization.Id === org.Id 
+				? 'organization-item glass-item selected' 
+				: 'organization-item glass-item'
+		}));
 	}
 	
     get dynamicBreadcrumb() {
@@ -180,7 +192,7 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 				console.log('Product Versions:', this.productVersions);	
 				this.productVersions = this.productVersions.map(opt => ({
 					...opt,
-					Installed_Date__c : opt?.Installed_Date__c?.split('T')[0] || null,
+					Installed_Date__c : this.formatDate(opt?.Installed_Date__c || null),
 				}));
 				console.log('Product Versions:', this.productVersions);	
 
@@ -314,18 +326,25 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 	handleBack() {
 		// If in a detail subview, close it first
 		if (this.showRecordDetails) {
+			console.log('1');
 			this.closeRecordDetails();
 			this.scrollToTop();
 			return;
 		}
 		if (this.showOrganizationDetails) {
-			this.handleCloseOrganizationDetails();
-			this.step = PAGE_STEPS.ORGANIZATIONS;
+			console.log('Back from organization details -> Actions');
+			this.showOrganizationDetails = false;
+			this.selectedOrganization = null;
+			this.productSubscribers = [];
+			this.invoices = [];
+			this.productVersions = [];
+			this.step = PAGE_STEPS.ACTIONS;
 			this.scrollToTop();
 			return;
 		}
 
 		if (this.navigationStack.length > 0) {
+			console.log('3');
 			const previousState = this.navigationStack.pop();
 			this.step = previousState.step;
 			if (previousState.step === PAGE_STEPS.SELECT) {
@@ -415,6 +434,7 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 				getInvoicesByOrganization({ organizationId: this.selectedOrganization.Id })
 			]);
 			
+			console.log('Fetched Product Subscribers:', productSubscribers);
 			// Process Product Subscribers with serial numbers
 			this.productSubscribers = (productSubscribers || []).map((ps, index) => ({
 				...ps,
@@ -424,7 +444,8 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 				expirationDateFormatted: ps.Expiration_DateTime__c ? this.formatDate(ps.Expiration_DateTime__c) : 'N/A',
 				isTrialText: ps.Is_Trial__c ? 'Yes' : 'No',
 				statusClass: ps.Active__c ? 'status-active' : 'status-inactive'
-			}));
+			}
+		));
 			
 			// Process Invoices with serial numbers
 			this.invoices = (invoices || []).map((inv, index) => ({
@@ -446,16 +467,22 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 	}
 	
 	formatDate(dateString) {
+		console.log('Date string received for formatting:', dateString);
 		if (!dateString) return 'N/A';
+		console.log('Formatting date:', dateString);
+		if( dateString.includes('T') ) {
+			dateString = dateString.split('T')[0];
+		}
 		try {
-			const date = new Date(dateString);
-			return date.toLocaleDateString('en-US', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit'
-			});
+			console.log('Creating Date object from string:', dateString);
+			const d = new Date(dateString);
+			const dd = String(d.getDate()).padStart(2, '0');
+			const mm = String(d.getMonth() + 1).padStart(2, '0');
+			const yyyy = d.getFullYear();
+			return `${dd}/${mm}/${yyyy}`;
 		} catch (e) {
-			return 'Invalid Date';
+			console.log('Error formatting date:', e);
+			return '-';
 		}
 	}
 
@@ -471,7 +498,7 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 			{ key: 'active', label: 'Active', value: this.selectedRecord.Active__c ? 'Yes' : 'No' },
 			{ key: 'product', label: 'Product', value: this.selectedRecord?.Product__r?.Name || '-' },
 			{ key: 'version', label: 'Version Number', value: this.selectedRecord.Version_Number__c || '-' },
-			{ key: 'expiration', label: 'Expiration DateTime', value: this.selectedRecord.Expiration_DateTime__c ? this.formatDate(this.selectedRecord.Expiration_DateTime__c) : '-' },
+			{ key: 'expiration', label: 'Expiration Date', value: this.selectedRecord.Expiration_DateTime__c ? this.formatDate(this.selectedRecord.Expiration_DateTime__c) : '-' },
 			{ key: 'productPlan', label: 'Product Plan', value: this.selectedRecord?.Product_Plan__r?.Name || '-' }
 		];
 	}
@@ -563,11 +590,13 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 	// Update Expiry Date Methods
 	handleUpdateExpiry() {
 		if (this.selectedRecord && this.selectedRecord.Expiration_DateTime__c) {
-			this.currentExpiryDate = this.selectedRecord.Expiration_DateTime__c;
+			console.log('Current Expiry Date ⚡:', this.selectedRecord.Expiration_DateTime__c);
+			this.currentExpiryDate = this.formatDate(this.selectedRecord?.Expiration_DateTime__c);
+			this.currentIsTrial = this.selectedRecord?.Is_Trial__c;
 			this.durationMonths = '';
 			this.newExpiryPreview = '';
 			this.showUpdateExpiryModal = true;
-		}
+		}	
 	}
 
 	closeUpdateExpiryModal() {
@@ -581,22 +610,24 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 		this.calculateNewExpiryDate();
 	}
 
+	handIsTrialChange(event) {
+		console.log('Trial checkbox changed:', event.currentTarget.checked);
+		this.currentIsTrial = event.currentTarget.checked;
+	}
+
 	calculateNewExpiryDate() {
 		if (this.currentExpiryDate && this.durationMonths) {
 			try {
-				const currentDate = new Date(this.currentExpiryDate);
+				console.log('Calculating new expiry date from:', this.currentExpiryDate, 'adding months:', this.durationMonths);
+				const currentDate = this.currentExpiryDate.split('/').reverse().join('-');
+				console.log('Current Date for calculation:', currentDate);
 				const newDate = new Date(currentDate);
+				console.log('New Date before adding months:', newDate);
 				newDate.setMonth(newDate.getMonth() + parseInt(this.durationMonths));
 				
+				console.log('New Date after adding months:', newDate);
 				// Format the new date
-				this.newExpiryPreview = newDate.toLocaleString('en-US', {
-					year: 'numeric',
-					month: '2-digit',
-					day: '2-digit',
-					hour: '2-digit',
-					minute: '2-digit',
-					hour12: true
-				});
+				this.newExpiryPreview = this.formatDate(newDate.toISOString().split('T')[0]);
 			} catch (error) {
 				console.error('Error calculating new expiry date:', error);
 				this.newExpiryPreview = '';
@@ -612,21 +643,26 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 
 	async saveExpiryUpdate() {
 		if (this.saveExpiryDisabled) return;
-
+		if (this.currentIsTrial) {
+			this.showToast('Error', 'Cannot update expiry for trial subscriptions', 'error');
+			return;
+		};
 		if (!this.selectedRecord || !this.selectedRecord.Id) {
 			this.showToast('Error', 'No selected record to update', 'error');
 			return;
 		}
+		if( !this.newExpiryPreview ) {
+			this.showToast('Error', 'No new expiry date calculated Please add duration', 'error');
+			return;
+		}
 
-		this.sectionLoading = true;
+		this.expirySaving = true;
 		try {
 			// send date string (YYYY-MM-DD) to Apex
-			const result = await updateProductSubscriberExpiry({ productSubscriberId: this.selectedRecord.Id, newExpirationDate: this.currentExpiryDate });
+			const result = await updateProductSubscriberExpiry({ productSubscriberId: this.selectedRecord.Id, newExpirationDate: this.newExpiryPreview.split('/').reverse().join('-') });
 			if (result) {
 				this.showToast('Success', 'Expiry date updated successfully', 'success');
-				// Refresh selectedRecord from server
 				this.selectedRecord = await getProductSubscriberById({ productSubscriberId: this.selectedRecord.Id });
-				// Also refresh the parent lists so UI shows updated expiration in the table
 				if (this.selectedOrganization && this.showOrganizationDetails) {
 					await this.loadSectionData();
 				}
@@ -637,7 +673,7 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 			console.error('saveExpiryUpdate error', err);
 			this.showToast('Error', 'Error updating expiry date', 'error');
 		} finally {
-			this.sectionLoading = false;
+			this.expirySaving = false;
 			this.closeUpdateExpiryModal();
 		}
 	}
@@ -646,53 +682,64 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 	async handleUpdateProductPlan() {
 		if (this.selectedRecord) {
 			this.currentProductPlan = this.selectedRecord.Product_Plan__r?.Name || 'No plan selected';
+			this.currentProductPlanPrice = this.selectedRecord.Product_Plan__r?.Price__c ? `$${this.selectedRecord.Product_Plan__r.Price__c.toFixed(2)}` : '-';
 			this.selectedProductPlanId = this.selectedRecord.Product_Plan__c || '';
-			this.productPlanLoading = true;
+			this.oldselectedProductPlanId = this.selectedRecord.Product_Plan__c || '';
+			this.selectedProductPlanName = '';
+			this.selectedProductPlanPrice = '';
 			this.showUpdateProductPlanModal = true;
 
 			try {
-				// TODO: Implement Apex method to fetch product plans
-				// For now, using mock data
-				this.productPlanOptions = [
-					{ label: 'Basic Plan', value: 'basic-plan-id' },
-					{ label: 'Premium Plan', value: 'premium-plan-id' },
-					{ label: 'Enterprise Plan', value: 'enterprise-plan-id' },
-					{ label: 'Trial Plan', value: 'trial-plan-id' }
-				];
+				// Fetch product plans for the selected product
+				const productId = this.selectedRecord.Product__c;
+				const plans = await getProductPlansByProduct({ productId });
+				this.productPlanOptions = (plans || []).map(p => ({ 
+					label: `${p.Name}`, 
+					value: p.Id, 
+					name: p.Name, 
+					price: p.Price__c ? `$${p.Price__c.toFixed(2)}` : '-' 
+				}));
 			} catch (error) {
 				console.error('Error fetching product plans:', error);
 				this.showToast('Error', 'Error loading product plans', 'error');
-			} finally {
-				this.productPlanLoading = false;
 			}
+		}
+		else{
+			this.showToast('Error', 'No selected record to update', 'error');
 		}
 	}
 
 	closeUpdateProductPlanModal() {
 		this.showUpdateProductPlanModal = false;
 		this.selectedProductPlanId = '';
+		this.selectedProductPlanName = '';
+		this.selectedProductPlanPrice = '';
 		// this.productPlanOptions = [];
-		this.productPlanLoading = false;
+		this.detailLoading = false;
 	}
 
 	handleProductPlanChange(event) {
 		this.selectedProductPlanId = event.currentTarget.value;
+		const selectedOption = this.productPlanOptions.find(opt => opt.value === this.selectedProductPlanId);
+		if (selectedOption) {
+			this.selectedProductPlanName = selectedOption.name;
+			this.selectedProductPlanPrice = selectedOption.price;
+		} else {
+			this.selectedProductPlanName = '';
+			this.selectedProductPlanPrice = '';
+		}
 	}
 
-	get saveProductPlanDisabled() {
-		return !this.selectedProductPlanId || this.productPlanLoading;
-	}
 
 
 	async saveProductPlanUpdate() {
-			if (this.saveProductPlanDisabled) return;
 
-			if (!this.selectedRecord || !this.selectedRecord.Id) {
-				this.showToast('Error', 'No selected record to update', 'error');
+			if (!this.selectedProductPlanId || this.oldselectedProductPlanId == this.selectedProductPlanId || !this.selectedRecord?.Id) {
+				this.showToast('Error', 'Select a new plan for update', 'error');
 				return;
 			}
 
-			this.productPlanLoading = true;
+			this.productPlanSaving = true;
 			try {
 				const result = await updateProductSubscriberPlan({ productSubscriberId: this.selectedRecord.Id, newProductPlanId: this.selectedProductPlanId });
 				if (result) {
@@ -706,7 +753,7 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 				console.error('saveProductPlanUpdate error', err);
 				this.showToast('Error', 'Error updating product plan', 'error');
 			} finally {
-				this.productPlanLoading = false;
+				this.productPlanSaving = false;
 				this.closeUpdateProductPlanModal();
 			}
 		}
@@ -714,7 +761,12 @@ export default class ManagePLMSRecordsPage extends LightningElement {
 	// Helper method to show toast messages
 	showToast(title, message, variant) {
 		// Using console.log for now since we don't have access to ShowToastEvent
-		console.log(`${variant.toUpperCase()}: ${title} - ${message}`);
+		const event = new ShowToastEvent({
+        title: title,
+        message: message,
+        variant: variant
+    });
+    this.dispatchEvent(event);
 	}
 
 	// Prevent clicks inside modals from closing them

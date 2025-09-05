@@ -3,7 +3,7 @@
     --bg-grad-start: #0f172a;
     --bg-grad-end: #f8fafc;
     --glass-bg: rgba(255, 255, 255, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-border: rgba(241, 241, 241, 0.4);
     --text: #1f2937;
     --subtext: #6b7280;
     --accent: #3b82f6;
@@ -727,6 +727,18 @@
 .organization-item:hover .chevron {
     opacity: 1;
     transform: translateX(4px);
+}
+
+.organization-item.selected {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.2));
+    border-color: var(--accent);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    transform: translateY(-2px);
+}
+
+.organization-item.selected .meta .name {
+    color: var(--accent-600);
+    font-weight: 700;
 }
 
 /* Environment Details Styles */
@@ -1461,4 +1473,29 @@
     50% {
         opacity: 0.5;
     }
+}
+
+/* Plan Details Styling */
+.plan-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+}
+
+
+.plan-name {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0;
+    font-size: 1rem;
+}
+
+.plan-price {
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 1rem;
 }

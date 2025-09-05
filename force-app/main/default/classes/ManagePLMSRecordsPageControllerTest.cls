@@ -71,14 +71,6 @@ public class ManagePLMSRecordsPageControllerTest {
     }
     
     @IsTest
-    static void testGetOrganizationById() {
-        Test.startTest();
-        Organization__c testOrg = [SELECT Id FROM Organization__c WHERE Name = 'Test Org' LIMIT 1];
-        Organization__c org = ManagePLMSRecordsPageController.getOrganizationById(testOrg.Id);
-        Test.stopTest();
-    }
-    
-    @IsTest
     static void testGetProductSubscribersByOrganization() {
         Test.startTest();
         Organization__c testOrg = [SELECT Id FROM Organization__c WHERE Name = 'Test Org' LIMIT 1];

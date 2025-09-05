@@ -101,15 +101,14 @@
                         </template>
 
                         <template if:true={organizationsVisible}>
-
                             <template if:false={showRecordDetails}>
                                 <template if:true={hasOrganizations}>
                                     <template if:false={showOrganizationDetails}>
                                         <h3 class="title">Select the Organization</h3>
                                     </template>
                                     <ul class="organization-list" role="list">
-                                        <template for:each={organizations} for:item="org">
-                                            <li key={org.Id} data-id={org.Id} class="organization-item glass-item"
+                                        <template for:each={organizationsWithClass} for:item="org">
+                                            <li key={org.Id} data-id={org.Id} class={org.className}
                                                 onclick={handleSelectOrganization}
                                                 onkeydown={handleOrganizationItemKeydown} role="listitem" tabindex="0">
                                                 <div class="meta">
@@ -237,7 +236,7 @@
                                         <table class="data-table glass-table">
                                             <thead>
                                                 <tr>
-                                                    <th>Serial Number</th>
+                                                    <th>No.</th>
                                                     <th>Name</th>
                                                     <th>Product Name</th>
                                                     <th>Install Date</th>
@@ -452,12 +451,15 @@
                                 </div>
                             </template>
                         </template>
-                        <template if:false={selectedRecord}>
-                            <div class="empty-state">
-                                <div class="empty-icon">⚠️</div>
-                                <h3>No Record Data</h3>
-                                <p>Unable to load the selected record details.</p>
-                            </div>
+
+                        <template if:false={detailLoading}>
+                            <template if:false={selectedRecord}>
+                                <div class="empty-state">
+                                    <div class="empty-icon">⚠️</div>
+                                    <h3>No Record Data</h3>
+                                    <p>Unable to load the selected record details.</p>
+                                </div>
+                            </template>
                         </template>
                     </div>
                 </div>
@@ -482,23 +484,42 @@
                 </div>
 
                 <div class="mini-modal-body">
-                    <div class="form-field">
-                        <label class="form-label">Current Expiration Date</label>
-                        <div class="preview-value">{currentExpiryDate}</div>
 
-                    </div>
 
-                    <div class="form-field">
-                        <lightning-input type="number" value={durationMonths} onchange={handleDurationChange} min="1"
-                            placeholder="Enter duration in months" required label="Duration (in months)">
-                        </lightning-input>
-                    </div>
-
-                    <template if:true={newExpiryPreview}>
-                        <div class="form-field preview">
-                            <label class="form-label">New Expiry Date Preview</label>
-                            <div class="preview-value">{newExpiryPreview}</div>
+                    <template if:true={expirySaving}>
+                        <div class="loading-spinner">
+                            <div class="spinner-inline">
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                            </div>
+                            Saving...
                         </div>
+                    </template>
+                    <template if:false={expirySaving}>
+
+                        <div class="form-field">
+                            <label class="form-label">Current Expiration Date</label>
+                            <div class="preview-value">{currentExpiryDate}</div>
+
+                        </div>
+
+                        <div class="form-field">
+
+                            <lightning-input type="checkbox" label="IsTrial" name="input1" checked={currentIsTrial}
+                                onclick={handIsTrialChange}></lightning-input>
+                            <lightning-input type="number" value={durationMonths} disabled={currentIsTrial}
+                                onchange={handleDurationChange} min="1" placeholder="Enter duration in months" required
+                                label="Duration (in months)">
+                            </lightning-input>
+                        </div>
+
+                        <template if:true={newExpiryPreview}>
+                            <div class="form-field preview">
+                                <label class="form-label">New Expiry Date Preview</label>
+                                <div class="preview-value">{newExpiryPreview}</div>
+                            </div>
+                        </template>
                     </template>
                 </div>
 
@@ -509,6 +530,7 @@
                     </button>
                 </div>
             </div>
+
         </div>
     </template>
 
@@ -539,34 +561,69 @@
                         </div>
                     </template>
 
-                    <template if:false={productPlanLoading}>
-                        <div class="form-field">
-                            <label class="form-label">Select Product Plan</label>
-                            <div class="custom-select-container">
-                                <select class="custom-select-field" name="PlanSelection" onchange={handleProductPlanChange}>
-                                    <option value="">Choose a Product Plan</option>
-                                    <template for:each={productPlanOptions} for:item="option">
-                                        <option key={option.value} value={option.value} selected={option.isSelected}>
-                                            {option.label}
-                                        </option>
-                                    </template>
-                                </select>
+                    <template if:true={productPlanSaving}>
+                        <div class="loading-spinner">
+                            <div class="spinner-inline">
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
                             </div>
+                            Updating product plan...
                         </div>
+                    </template>
 
+                    <template if:false={productPlanLoading}>
                         <template if:true={currentProductPlan}>
                             <div class="form-field info">
-                                <label class="form-label">Current Product Plan</label>
-                                <div class="current-value">{currentProductPlan}</div>
+                                <label class="form-label">Current Plan Details</label>
+                                <div class="current-value">
+                                    <div class="plan-detail">
+
+                                        <span class="plan-name">Name : {currentProductPlan}</span>
+
+                                        <span class="plan-price">Price : {currentProductPlanPrice}</span>
+                                    </div>
+                                </div>
                             </div>
                         </template>
+
+                        <template if:false={currentProductPlan}>
+                            <div class="form-field">
+                                <label class="form-label">Select Product Plan</label>
+                                <div class="custom-select-container">
+                                    <select class="custom-select-field" name="PlanSelection"
+                                        onchange={handleProductPlanChange}>
+                                        <option value="">Choose a Product Plan</option>
+                                        <template for:each={productPlanOptions} for:item="option">
+
+                                            <option key={option.value} value={option.value}
+                                                selected={option.isSelected}>
+                                                {option.label}
+                                            </option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <template if:true={selectedProductPlanName}>
+                                <div class="form-field info">
+                                    <label class="form-label">New Plan Details</label>
+                                    <div class="selected-value">
+                                        <div class="plan-detail">
+                                            <span class="plan-name">Name : {selectedProductPlanName}</span>
+                                            <span class="plan-price">Price : {selectedProductPlanPrice}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
                     </template>
+
                 </div>
 
                 <div class="mini-modal-footer">
                     <button class="action-button secondary" onclick={closeUpdateProductPlanModal}>Cancel</button>
-                    <button class="action-button primary" onclick={saveProductPlanUpdate}
-                        disabled={saveProductPlanDisabled}>
+                    <button class="action-button primary" onclick={saveProductPlanUpdate}>
                         Save
                     </button>
                 </div>
