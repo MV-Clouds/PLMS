@@ -41,29 +41,6 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
             Product_Subscriber__c newInstallData = (Product_Subscriber__c) JSON.deserialize(backendUseData, Product_Subscriber__c.class);
             System.debug('newInstallData ' + newInstallData);
 
-            // Fetch related account, create new if not found
-            List<Account> accountRecs = [SELECT Id FROM Account WHERE Name = :newInstallData.Org_Name__c LIMIT 1];
-            Account orgAccount = new Account();
-            if(accountRecs.isEmpty()){
-                orgAccount.Name = newInstallData.Org_Name__c;
-                orgAccount.Email__c = newInstallData.Email__c;
-                orgAccount.Phone = newInstallData.Phone__c;
-                insert orgAccount;
-            } else {
-                orgAccount = accountRecs[0];
-            }
-
-            // Find Account related Organization record
-            List<Organization__c> accountOrgs = [SELECT Id, Name FROM Organization__c WHERE Account__c = :orgAccount.Id AND Name = :newInstallData.Environment__c LIMIT 1];
-            Organization__c orgRec = new Organization__c();
-            if(accountOrgs.isEmpty()){
-                orgRec.Name = newInstallData.Environment__c;
-                orgRec.Account__c = orgAccount.Id;
-                insert orgRec;
-            } else {
-                orgRec = accountOrgs[0];
-            }
-
             List<Product__c> productRecs = [SELECT Id FROM Product__c WHERE Name = :newInstallData.Installed_Product__c LIMIT 1];
             System.debug('productRecs size ' + productRecs.size());
 
@@ -74,25 +51,47 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
                 newInstallData.Is_Trial__c = true;
                 newInstallData.Install_Date__c = System.today();
                 newInstallData.Last_Upgrade_Date__c = System.today();
-                newInstallData.Active__c = true;
-                newinstalldata.Organization__c = orgRec.Id;
-                newInstallData.Account__c = orgAccount.Id;
-                insert newInstallData;
 
-                // Create product version record
-                Product_Version__c productVersion = new Product_Version__c();
-                productVersion.Product__c = productRecs[0].Id;
-                productVersion.Name = newInstallData.Installed_Product__c + ' ' + newInstallData.Version_Number_Text__c;
-                productVersion.Version_Number__c = newInstallData.Version_Number_Text__c;
-                productVersion.Product_Subscriber__c = newInstallData.Id;
-                productVersion.Installed_Date__c = System.now();
-                insert productVersion;
+                // Fetch related account, create new if not found
+                List<Account> accountRecs = [SELECT Id, Name FROM Account WHERE Name = :newInstallData.Org_Name__c LIMIT 1];
+                Account orgAccount = new Account();
+                if(accountRecs.isEmpty()){
+                    orgAccount.Name = newInstallData.Org_Name__c;
+                    orgAccount.Email__c = newInstallData.Email__c;
+                    orgAccount.Phone = newInstallData.Phone__c;
+
+                    Id rtId = Schema.SObjectType.Account.getRecordTypeInfosByDeveloperName().get('Customer').getRecordTypeId();
+                    orgAccount.RecordTypeId = rtId;
+                    insert orgAccount;
+                } else {
+                    orgAccount = accountRecs[0];
+                }
+
+                // Create Opportunity record
+                Opportunity opp = new Opportunity();
+                opp.Name = orgAccount.Name + ' - ' + newInstallData.Installed_Product__c + ' - ' + newInstallData.Version_Number_Text__c;
+                opp.AccountId = orgAccount.Id;
+                opp.CloseDate = Date.valueOf(newInstallData.Expiration_DateTime__c);
+                opp.StageName = 'New';
+                opp.Product_Subscriber_Detail_JSON__c = JSON.serialize(newInstallData);
+
+                Id rtId = Schema.SObjectType.Opportunity.getRecordTypeInfosByDeveloperName().get('Customer').getRecordTypeId();
+                opp.RecordTypeId = rtId;
+                insert opp;
             } 
             
             // Package Action = Uninstall
             else if(packageAction == 'Uninstall' && backendUseData != null && backendUseData != '' && !productRecs.isEmpty()){
                 String productId = productRecs[0].Id;
                 String orgId = newInstallData.Org_Id__c;
+
+                // Fetch opportunity record and mark it as closed lost
+                List<Opportunity> oppRecs = [SELECT Id, StageName FROM Opportunity WHERE AccountId IN (SELECT Id FROM Account WHERE Name = :newInstallData.Org_Name__c) AND StageName != 'Closed Lost' LIMIT 1];
+                System.debug('oppRecs size ' + oppRecs.size());
+                if(!oppRecs.isEmpty()){
+                    oppRecs[0].StageName = 'Closed Lost';
+                    update oppRecs[0];
+                }
                 
                 // Fetch product subscriber record and mark it as inactive
                 List<Product_Subscriber__c> productSubscriberRec = [SELECT Id, Org_Id__c, Active__c FROM Product_Subscriber__c WHERE Product__c = :productId AND Org_Id__c = :orgId AND Active__c = true LIMIT 1];
