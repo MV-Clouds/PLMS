@@ -243,10 +243,10 @@
             <table class="header-table">
                 <tr>
                     <td class="company-details">
-                        <h1>Your Company Inc.</h1>
-                        <p>123 Business Lane, Suite 100</p>
-                        <p>City, State, 12345</p>
-                        <p>contact@yourcompany.com</p>
+                        <h1>MV Clouds Private Limited</h1>
+                        <p>D-404, The First Synthesis, B/H Keshavbaug Party Plot</p>
+                        <p>Ahmedabad, Gujarat - 380015</p>
+                        <p>info@mvclouds.com</p>
                     </td>
                     <td class="invoice-title">
                         <h2>Invoice</h2>
@@ -279,7 +279,7 @@
             <table class="items-table">
                 <thead>
                     <tr>
-                        <th style="width: 50%;">Product / Service</th>
+                        <th style="width: 50%;">Product</th>
                         <th class="text-center">Plan</th>
                         <th class="text-center">Duration</th>
                         <th class="text-right">Amount</th>
@@ -288,8 +288,9 @@
                 <tbody>
                     <tr>
                         <td>
-                            <div class="item-name">{!invoice.Product_Version__r.Product__r.Name}</div>
-                            <div class="item-description">{!invoice.Product_Version__r.release_notes__c}</div>
+                            <!-- <div class="item-name">{!invoice.Product_Version__r.Product__r.Name}</div> -->
+                            <div class="item-name">{!invoice.Product_Subscriber__r.Product__r.Name}</div>
+                            <!-- <div class="item-description">{!invoice.Product_Version__r.release_notes__c}</div> -->
                         </td>
                         <td class="text-center">{!invoice.Product_Plan__r.Name}</td>
                         <td class="text-center">{!invoice.duration__c}</td>

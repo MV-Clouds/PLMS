@@ -7,20 +7,12 @@ private class InvoiceControllerTest {
         Product__c product = new Product__c(Name = 'WBConnect');
         insert product;
 
-        Product_Version__c version = new Product_Version__c(
-            Version_Number__c = '1.0',
-            Product__c = product.Id,
-            Release_Notes__c = 'Initial release',
-            Version_URL__c = 'https://example.com/version2.0',
-            Type__c = 'Beta'
-        );
-        insert version;
-
         Product_Subscriber__c subscriber = new Product_Subscriber__c(
             First_Name__c = 'John',
             Last_Name__c = 'Doe',
             Email__c = 'john.doe@example.com',
-            Address__c = '123 Test Street'
+            Address__c = '123 Test Street',
+            Product__c = product.Id
         );
         insert subscriber;
 
@@ -31,8 +23,7 @@ private class InvoiceControllerTest {
             Discount__c = 10,
             Duration__c = 30,
             Status__c = 'Paid',
-            Product_Subscriber__c = subscriber.Id,
-            Product_Version__c = version.Id
+            Product_Subscriber__c = subscriber.Id
         );
         insert invoice;
 
