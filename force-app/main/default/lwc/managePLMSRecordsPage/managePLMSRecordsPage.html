@@ -1,0 +1,636 @@
+<template>
+    <div class="page">
+        <div class="container glass-panel">
+            <!-- Header Section -->
+            <template if:true={isSelectStep}>
+                <div class="header-section">
+                    <h1 class="title">Search Accounts</h1>
+                    <div class="search-bar">
+                        <lightning-input type="search" variant="label-hidden" placeholder="Search Accounts"
+                            value={query} onchange={handleSearchInput} class="search-input">
+                        </lightning-input>
+                    </div>
+                </div>
+
+            </template>
+
+
+            <!-- Global Action Bar: Back + Breadcrumbs (visible on all steps except search) -->
+            <template if:true={showGlobalActionBar}>
+                <div class="section-header  global-action-bar">
+                    <button class="back" onclick={handleBack}>
+                        <svg class="back-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        {backButtonText}
+                    </button>
+
+                    <div class="breadcrumb-trail">
+                        <template for:each={dynamicBreadcrumb} for:item="breadcrumb">
+                            <div key={breadcrumb.key} class="breadcrumb-wrapper">
+                                <template if:true={breadcrumb.isClickable}>
+                                    <button class="breadcrumb-link" onclick={handleBreadcrumbClick}
+                                        data-step={breadcrumb.key}>
+                                        {breadcrumb.label}
+                                    </button>
+                                </template>
+                                <template if:false={breadcrumb.isClickable}>
+                                    <span class="breadcrumb-current">{breadcrumb.label}</span>
+                                </template>
+                                <template if:false={breadcrumb.last}>
+                                    <span class="breadcrumb-separator">›</span>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+
+            </template>
+            <!-- Actions Section -->
+            <template if:true={isActionsStep}>
+                <div class="actions-section ">
+                    <div class="cards">
+                        <article class="card glass-card" onclick={handleOpenOrganization} tabindex="0" role="button">
+                            <h2>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none">
+                                    <path
+                                        d="M14 1.99774C11.6528 1.99774 9.75 3.90053 9.75 6.24774C9.75 8.33903 11.2605 10.0775 13.25 10.4318V13.5H8.75C7.50736 13.5 6.5 14.5074 6.5 15.75V17.566C4.51049 17.9202 3 19.6587 3 21.75C3 24.0972 4.90279 26 7.25 26C9.59721 26 11.5 24.0972 11.5 21.75C11.5 19.6587 9.98951 17.9202 8 17.566V15.75C8 15.3358 8.33579 15 8.75 15H19.25C19.6642 15 20 15.3358 20 15.75V17.566C18.0105 17.9202 16.5 19.6587 16.5 21.75C16.5 24.0972 18.4028 26 20.75 26C23.0972 26 25 24.0972 25 21.75C25 19.6587 23.4895 17.9202 21.5 17.566V15.75C21.5 14.5074 20.4926 13.5 19.25 13.5H14.75V10.4318C16.7395 10.0775 18.25 8.33904 18.25 6.24774C18.25 3.90053 16.3472 1.99774 14 1.99774ZM11.25 6.24774C11.25 4.72896 12.4812 3.49774 14 3.49774C15.5188 3.49774 16.75 4.72896 16.75 6.24774C16.75 7.76652 15.5188 8.99774 14 8.99774C12.4812 8.99774 11.25 7.76652 11.25 6.24774ZM4.5 21.75C4.5 20.2312 5.73122 19 7.25 19C8.76878 19 10 20.2312 10 21.75C10 23.2688 8.76878 24.5 7.25 24.5C5.73122 24.5 4.5 23.2688 4.5 21.75ZM20.75 19C22.2688 19 23.5 20.2312 23.5 21.75C23.5 23.2688 22.2688 24.5 20.75 24.5C19.2312 24.5 18 23.2688 18 21.75C18 20.2312 19.2312 19 20.75 19Z"
+                                        fill="#212121" />
+                                </svg>
+                                Organization
+                            </h2>
+                            <p>View organizational details for this account.</p>
+                        </article>
+                        <article class="card glass-card" onclick={handleOpenQuotes} tabindex="0" role="button">
+                            <h2>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none">
+                                    <path
+                                        d="M10 7H14V9H10V7ZM10 11H18V13H10V11ZM10 15H16V17H10V15ZM3 3V21L6 18H20C20.5523 18 21 17.5523 21 17V3C21 2.44772 20.5523 2 20 2H4C3.44772 2 3 2.44772 3 3Z"
+                                        fill="#212121" />
+                                </svg>
+                                Quotes
+                            </h2>
+                            <p>View quotes related to this account.</p>
+                        </article>
+                    </div>
+                </div>
+
+            </template>
+
+
+            <!-- Organizations Section -->
+            <template if:true={isOrganizationsStep}>
+                <template if:false={showRecordDetails}>
+                    <div class="organization-section">
+                        <!-- Global action bar already shows back and breadcrumbs -->
+
+                        <template if:true={organizationLoading}>
+                            <div class="loading">
+                                <div class="spinner-inline">
+                                    <div class="spinner-dot"></div>
+                                    <div class="spinner-dot"></div>
+                                    <div class="spinner-dot"></div>
+                                </div>
+                                Loading Organizations...
+                            </div>
+                        </template>
+
+                        <template if:true={organizationsVisible}>
+                            <template if:false={showRecordDetails}>
+                                <template if:true={hasOrganizations}>
+                                    <template if:false={showOrganizationDetails}>
+                                        <h3 class="title">Select the Organization</h3>
+                                    </template>
+                                    <ul class="organization-list" role="list">
+                                        <template for:each={organizationsWithClass} for:item="org">
+                                            <li key={org.Id} data-id={org.Id} class={org.className}
+                                                onclick={handleSelectOrganization}
+                                                onkeydown={handleOrganizationItemKeydown} role="listitem" tabindex="0">
+                                                <div class="meta">
+                                                    <div class="name">{org.Name}</div>
+                                                </div>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </template>
+                                <template if:false={hasOrganizations}>
+                                    <div class="empty">No organizations found for this account.</div>
+                                </template>
+                            </template>
+                        </template>
+                    </div>
+                </template>
+            </template>
+
+
+            <!-- Environment Details Section -->
+            <template if:true={isEnvironmentStep}>
+                <div class="environment-section">
+                    <!-- Global action bar already shows back and breadcrumbs -->
+
+                    <div class="environment-details">
+                        <div class="environment-card">
+                            <h2>Environment Details</h2>
+                            <template if:true={selectedOrganization}>
+                                <div class="detail-row">
+                                    <span class="label">Organization:</span>
+                                    <span class="value">{selectedOrganization.Name}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Type:</span>
+                                    <span class="value">{selectedOrganization.Name}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Account:</span>
+                                    <span class="value">{selected.Name}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+            </template>
+
+
+            <!-- Results Section -->
+            <template if:true={isSelectStep}>
+                <div class="results-section ">
+                    <template if:true={showPlaceholder}>
+                        <div class="empty">Search Accounts to see results.</div>
+                    </template>
+
+                    <template if:true={loading}>
+                        <div class="loading">
+                            <div class="spinner-inline">
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                            </div>
+                            Searching...
+                        </div>
+                    </template>
+
+                    <template if:true={resultsVisible}>
+                        <template if:true={hasAccounts}>
+                            <ul class={listClass} role="list">
+                                <template for:each={accounts} for:item="acc">
+                                    <li key={acc.Id} data-id={acc.Id} class="account-item glass-item"
+                                        onclick={handleSelectAccount} onkeydown={handleItemKeydown} role="listitem"
+                                        tabindex="0">
+                                        <div class="avatar">{acc.idx}</div>
+                                        <div class="meta">
+                                            <div class="name">{acc.Name}</div>
+                                        </div>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                        <template if:false={hasAccounts}>
+                            <div class="empty">No accounts found. Try a different name or email.</div>
+                        </template>
+                    </template>
+                </div>
+
+            </template>
+
+
+            <!-- Organization Details Section -->
+            <template if:true={showOrganizationDetails}>
+                <div class="organization-details-section organization-details-panel  slide-in">
+                    <!-- Global action bar already shows back and breadcrumbs -->
+
+                    <!-- Tab Navigation -->
+                    <div class="tab-navigation">
+                        <button class={productSubscribersTabClass} data-tab="product-subscribers"
+                            onclick={handleTabClick}>
+                            Product Subscribers
+                        </button>
+                        <button class={invoicesTabClass} data-tab="invoices" onclick={handleTabClick}>
+                            Invoices
+                        </button>
+                    </div>
+
+                    <!-- Loading State -->
+                    <template if:true={sectionLoading}>
+                        <div class="loading">
+                            <div class="spinner-inline">
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                            </div>
+                            Loading data...
+                        </div>
+                    </template>
+
+                    <!-- Product Subscribers Tab -->
+                    <template if:true={isProductSubscribersTab}>
+                        <template if:false={sectionLoading}>
+                            <div class="tab-content">
+                                <template if:true={hasProductSubscribers}>
+                                    <div class="table-container">
+                                        <table class="data-table glass-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>No.</th>
+                                                    <th>Name</th>
+                                                    <th>Product Name</th>
+                                                    <th>Install Date</th>
+                                                    <th>Expiration Date</th>
+                                                    <th>Is Trial</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template for:each={productSubscribers} for:item="ps">
+                                                    <tr key={ps.Id}>
+                                                        <td>{ps.serialNumber}</td>
+                                                        <td>{ps.Name}</td>
+                                                        <td>{ps.productName}</td>
+                                                        <td>{ps.installDateFormatted}</td>
+                                                        <td>{ps.expirationDateFormatted}</td>
+                                                        <td>{ps.isTrialText}</td>
+                                                        <td>
+                                                            <lightning-button-icon icon-name='utility:preview'
+                                                                alternative-text='preview' title='preview'
+                                                                class="action-button" data-id={ps.Id}
+                                                                data-type="subscriber" onclick={handleViewDetails}>
+                                                                ></lightning-button-icon>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </template>
+                                <template if:false={hasProductSubscribers}>
+                                    <div class="empty-state">
+                                        <div class="empty-icon">📦</div>
+                                        <h3>No Product Subscribers Found</h3>
+                                        <p>There are no product subscribers for this organization.</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </template>
+
+                    <!-- Invoices Tab -->
+                    <template if:true={isInvoicesTab}>
+                        <template if:false={sectionLoading}>
+                            <div class="tab-content">
+                                <template if:true={hasInvoices}>
+                                    <div class="table-container">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <template for:each={invoiceColumns} for:item="col">
+                                                        <th key={col.key}>{col.label}</th>
+                                                    </template>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template for:each={invoices} for:item="inv">
+                                                    <tr key={inv.Id}>
+                                                        <td>{inv.serialNumber}</td>
+                                                        <td>{inv.invoiceNumber}</td>
+                                                        <td>{inv.dateFormatted}</td>
+                                                        <td>{inv.amount}</td>
+                                                        <td>{inv.status}</td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </template>
+                                <template if:false={hasInvoices}>
+                                    <div class="empty-state">
+                                        <div class="empty-icon">🧾</div>
+                                        <h3>No Invoices Found</h3>
+                                        <p>There are no invoices for this organization.</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Record Detail Section -->
+            <template if:true={showRecordDetails}>
+                <div class="record-details-section record-details-panel glass-panel slide-in">
+                    <!-- Global action bar already shows back and breadcrumbs -->
+
+                    <div class="section-body">
+                        <template if:true={detailLoading}>
+                            <div class="loading">
+                                <div class="spinner-inline">
+                                    <div class="spinner-dot"></div>
+                                    <div class="spinner-dot"></div>
+                                    <div class="spinner-dot"></div>
+                                </div>
+                                Loading details...
+                            </div>
+                        </template>
+
+                        <template if:false={detailLoading}>
+                            <template if:true={selectedRecord}>
+                                <!-- Action Buttons -->
+                                <div class="section-actions">
+                                    <button class="action-button secondary" onclick={handleUpdateExpiry}>
+                                        Update Expiry Date
+                                    </button>
+                                    <button class="action-button secondary" onclick={handleUpdateProductPlan}>
+                                        Update Product Plan
+                                    </button>
+                                </div>
+
+                                <!-- 1. Record Information (JSON-driven) -->
+                                <div class="detail-section">
+                                    <h3>Record Information</h3>
+                                    <div class="detail-columns">
+                                        <div class="detail-column">
+                                            <template for:each={recordInfoLeft} for:item="field">
+                                                <div class="detail-row" key={field.key}>
+                                                    <span class="label">{field.label}:</span>
+                                                    <span class="value">{field.value}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div class="detail-column">
+                                            <template for:each={recordInfoRight} for:item="field">
+                                                <div class="detail-row" key={field.key}>
+                                                    <span class="label">{field.label}:</span>
+                                                    <span class="value">{field.value}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Organization Information (JSON-driven) -->
+                                <div class="detail-section">
+                                    <h3>Organization Information</h3>
+                                    <div class="detail-columns">
+                                        <div class="detail-column">
+                                            <template for:each={orgInfoLeft} for:item="field">
+                                                <div class="detail-row" key={field.key}>
+                                                    <span class="label">{field.label}:</span>
+                                                    <span class="value">{field.value}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div class="detail-column">
+                                            <template for:each={orgInfoRight} for:item="field">
+                                                <div class="detail-row" key={field.key}>
+                                                    <span class="label">{field.label}:</span>
+                                                    <span class="value">{field.value}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Installed User Information (JSON-driven) -->
+                                <div class="detail-section">
+                                    <h3>Installed User Information</h3>
+                                    <div class="detail-columns">
+                                        <div class="detail-column">
+                                            <template for:each={installedUserLeft} for:item="field">
+                                                <div class="detail-row" key={field.key}>
+                                                    <span class="label">{field.label}:</span>
+                                                    <span class="value">{field.value}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div class="detail-column">
+                                            <template for:each={installedUserRight} for:item="field">
+                                                <div class="detail-row" key={field.key}>
+                                                    <span class="label">{field.label}:</span>
+                                                    <span class="value">{field.value}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Product Version History -->
+                                <div class="detail-section">
+                                    <h3>Product Version History</h3>
+                                    <template if:true={productVersions}>
+                                        <template if:true={productVersions.length}>
+                                            <div class="table-container">
+                                                <table class="data-table compact">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Name</th>
+                                                            <th>Installed Date</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template for:each={productVersions} for:item="version">
+                                                            <tr key={version.Id}>
+                                                                <td>{version.Name}</td>
+                                                                <td>{version.Installed_Date__c}</td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </template>
+                                        <template if:false={productVersions.length}>
+                                            <div class="empty-state compact">
+                                                <div class="empty-icon">📦</div>
+                                                <p>No version history available for this product subscriber.</p>
+                                            </div>
+                                        </template>
+                                    </template>
+                                </div>
+                            </template>
+                        </template>
+
+                        <template if:false={detailLoading}>
+                            <template if:false={selectedRecord}>
+                                <div class="empty-state">
+                                    <div class="empty-icon">⚠️</div>
+                                    <h3>No Record Data</h3>
+                                    <p>Unable to load the selected record details.</p>
+                                </div>
+                            </template>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+    </div>
+
+    <!-- Update Expiry Date Mini Modal -->
+    <template if:true={showUpdateExpiryModal}>
+        <div class="modal-backdrop mini-modal-backdrop" onclick={closeUpdateExpiryModal}>
+            <div class="mini-modal-container" onclick={handleModalClick}>
+                <div class="mini-modal-header">
+                    <h3>Update Expiration Date</h3>
+                    <button class="modal-close" onclick={closeUpdateExpiryModal}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mini-modal-body">
+
+
+                    <template if:true={expirySaving}>
+                        <div class="loading-spinner">
+                            <div class="spinner-inline">
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                            </div>
+                            Saving...
+                        </div>
+                    </template>
+                    <template if:false={expirySaving}>
+
+                        <div class="form-field">
+                            <label class="form-label">Current Expiration Date</label>
+                            <div class="preview-value">{currentExpiryDate}</div>
+
+                        </div>
+
+                        <div class="form-field">
+
+                            <lightning-input type="checkbox" label="IsTrial" name="input1" checked={currentIsTrial}
+                                onclick={handIsTrialChange}></lightning-input>
+                            <lightning-input type="number" value={durationMonths} disabled={currentIsTrial}
+                                onchange={handleDurationChange} min="1" placeholder="Enter duration in months" required
+                                label="Duration (in months)">
+                            </lightning-input>
+                        </div>
+
+                        <template if:true={newExpiryPreview}>
+                            <div class="form-field preview">
+                                <label class="form-label">New Expiry Date Preview</label>
+                                <div class="preview-value">{newExpiryPreview}</div>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+
+                <div class="mini-modal-footer">
+                    <button class="action-button secondary" onclick={closeUpdateExpiryModal}>Cancel</button>
+                    <button class="action-button primary" onclick={saveExpiryUpdate} disabled={saveExpiryDisabled}>
+                        Save
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </template>
+
+    <!-- Update Product Plan Mini Modal -->
+    <template if:true={showUpdateProductPlanModal}>
+        <div class="modal-backdrop mini-modal-backdrop" onclick={closeUpdateProductPlanModal}>
+            <div class="mini-modal-container" onclick={handleModalClick}>
+                <div class="mini-modal-header">
+                    <h3>Update Product Plan</h3>
+                    <button class="modal-close" onclick={closeUpdateProductPlanModal}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mini-modal-body">
+                    <template if:true={productPlanLoading}>
+                        <div class="loading-spinner">
+                            <div class="spinner-inline">
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                            </div>
+                            Loading product plans...
+                        </div>
+                    </template>
+
+                    <template if:true={productPlanSaving}>
+                        <div class="loading-spinner">
+                            <div class="spinner-inline">
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                                <div class="spinner-dot"></div>
+                            </div>
+                            Updating product plan...
+                        </div>
+                    </template>
+
+                    <template if:false={productPlanLoading}>
+                        <template if:true={currentProductPlan}>
+                            <div class="form-field info">
+                                <label class="form-label">Current Plan Details</label>
+                                <div class="current-value">
+                                    <div class="plan-detail">
+
+                                        <span class="plan-name">Name : {currentProductPlan}</span>
+
+                                        <span class="plan-price">Price : {currentProductPlanPrice}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template if:false={currentProductPlan}>
+                            <div class="form-field">
+                                <label class="form-label">Select Product Plan</label>
+                                <div class="custom-select-container">
+                                    <select class="custom-select-field" name="PlanSelection"
+                                        onchange={handleProductPlanChange}>
+                                        <option value="">Choose a Product Plan</option>
+                                        <template for:each={productPlanOptions} for:item="option">
+
+                                            <option key={option.value} value={option.value}
+                                                selected={option.isSelected}>
+                                                {option.label}
+                                            </option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <template if:true={selectedProductPlanName}>
+                                <div class="form-field info">
+                                    <label class="form-label">New Plan Details</label>
+                                    <div class="selected-value">
+                                        <div class="plan-detail">
+                                            <span class="plan-name">Name : {selectedProductPlanName}</span>
+                                            <span class="plan-price">Price : {selectedProductPlanPrice}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+                    </template>
+
+                </div>
+
+                <div class="mini-modal-footer">
+                    <button class="action-button secondary" onclick={closeUpdateProductPlanModal}>Cancel</button>
+                    <button class="action-button primary" onclick={saveProductPlanUpdate}>
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+
+
+</template>
