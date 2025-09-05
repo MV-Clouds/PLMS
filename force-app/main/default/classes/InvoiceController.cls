@@ -29,10 +29,8 @@ public with sharing class InvoiceController {
             try {
                 invoice = [
                     SELECT
-                        Id, Name, Start_Date__c, End_Date__c, Price__c, Discount__c, Price_after_Discount__c, Duration__c, Status__c,
-                        Product_Plan__r.Name,
-                        Product_Subscriber__r.First_Name__c, Product_Subscriber__r.Last_Name__c, Product_Subscriber__r.Address__c, Product_Subscriber__r.Email__c,
-                        Product_Version__r.Product__r.Name, Product_Version__r.Release_Notes__c
+                        Id, Name, Start_Date__c, End_Date__c, Price__c, Discount__c, Price_after_Discount__c, Duration__c, Status__c, Product_Plan__r.Name,
+                        Product_Subscriber__r.First_Name__c, Product_Subscriber__r.Last_Name__c, Product_Subscriber__r.Address__c, Product_Subscriber__r.Email__c, Product_Subscriber__r.Product__r.Name
                     FROM Invoice__c
                     WHERE Id = :invoiceId
                     LIMIT 1
