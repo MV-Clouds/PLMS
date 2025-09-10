@@ -1,0 +1,25 @@
+<apex:page standardController="Quote">
+    <apex:includeLightning />
+
+    <div id="lwcContainer"></div>
+
+    <script>
+        try {
+            var quoteId = "{!Quote.Id}";
+            console.log("Quote Id:", quoteId);
+            
+            $Lightning.use("c:addProductCustomLwcApp", function() {
+                $Lightning.createComponent(
+                    "c:addProductsCustomLwc",              // your LWC name
+                    { recordId: quoteId },      // pass the parent Quote Id
+                    "lwcContainer",
+                    function(cmp) {
+                        console.log("LWC loaded successfully!");
+                    }
+                );
+            });
+        } catch (error) {
+            console.error('Error :: ', error);
+        }
+    </script>
+</apex:page>
