@@ -1,54 +1,6 @@
-/* newQuoteLineItem.css */
 .readonly-field input {
     background-color: #f8f9fa;
     color: #6c757d;
-}
-
-.price-container {
-    margin-bottom: 1rem;
-}
-
-.price-display {
-    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-    border: 1px solid #10b981;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    text-align: center;
-}
-
-.price-value {
-    font-weight: 700;
-    color: #065f46;
-    margin-bottom: 0.25rem;
-}
-
-.price-label {
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.final-price-container {
-    margin-bottom: 1rem;
-}
-
-.final-price-display {
-    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
-    border-radius: 0.375rem;
-    padding: 1rem;
-    text-align: center;
-    color: white;
-}
-
-.final-price-value {
-    font-weight: 700;
-    margin-bottom: 0.25rem;
-}
-
-.final-price-label {
-    opacity: 0.9;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
 }
 
 .slds-docked-form-footer {
@@ -58,6 +10,8 @@
     border-top: 1px solid #e5e5e5;
     box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
     z-index: 100;
+    display: flex;
+    flex-direction: column;
 }
 
 .slds-page-header {
@@ -98,6 +52,15 @@
 
 .slds-required {
     color: #dc2626;
+}
+
+.notification-div{
+    width: 50%;
+    margin: auto;
+}
+
+.buttons-div {
+    margin: auto;
 }
 
 /* Responsive adjustments */

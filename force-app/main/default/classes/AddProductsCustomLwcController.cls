@@ -25,7 +25,7 @@ public with sharing class AddProductsCustomLwcController {
     }
 
     @AuraEnabled
-    public static Id createQuoteLineItem(Id quoteId, Id productPlanId, Decimal discountValue) {
+    public static Id createQuoteLineItem(Id quoteId, Id productPlanId, Decimal discountValue, String description) {
         // Fetch Quote with Product2
         Quote q = [ SELECT Id, Product2_Id__c, Pricebook2Id FROM Quote WHERE Id = :quoteId LIMIT 1];
 
@@ -48,7 +48,8 @@ public with sharing class AddProductsCustomLwcController {
             Product_Plan__c = plan.Id,
             UnitPrice = plan.Price__c,
             Quantity = 1,
-            Discount = discountValue
+            Discount = discountValue,
+            Description = description
         );
 
         insert qli;

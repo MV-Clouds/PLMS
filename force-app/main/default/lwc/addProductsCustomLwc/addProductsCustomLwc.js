@@ -1,12 +1,9 @@
-// newQuoteLineItem.js
 import { LightningElement, api, track } from 'lwc';
-import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import { NavigationMixin } from 'lightning/navigation';
 import getQuoteDetails from '@salesforce/apex/AddProductsCustomLwcController.getQuoteDetails';
 import getProductPlans from '@salesforce/apex/AddProductsCustomLwcController.getProductPlans';
 import createQuoteLineItem from '@salesforce/apex/AddProductsCustomLwcController.createQuoteLineItem';
 
-export default class AddProductsCustomLwc extends NavigationMixin(LightningElement) {
+export default class AddProductsCustomLwc extends LightningElement {
     @api recordId;
     @track quote;
     @track productName;
@@ -17,6 +14,64 @@ export default class AddProductsCustomLwc extends NavigationMixin(LightningEleme
     @track discount = 0;
     @track description = '';
     @track isLoading = false;
+    @track message;
+    @track messageType;
+
+    // Computed property for formatted list price
+    get formattedListPrice() {
+        if (!this.listPrice) return 'Select a product plan to view price';
+        return `${this.listPrice.toFixed(2)}`;
+    }
+
+    // Computed property for formatted final price
+    get formattedFinalPrice() {
+        if (!this.calculatedPrice) return 'Select a product plan to view price';
+        return `${this.calculatedPrice}`;
+    }
+
+    // Computed property for calculated price
+    get calculatedPrice() {
+        if (!this.listPrice) return null;
+        const discountPercent = this.discount || 0;
+        const discountAmount = (this.listPrice * discountPercent) / 100;
+        const finalPrice = this.listPrice - discountAmount;
+        return finalPrice.toFixed(2);
+    }
+
+    // Check if save button should be disabled
+    get isDisabled() {
+        return !this.selectedPlanId || this.isLoading;
+    }
+
+    // Get CSS classes for message styling
+    get messageClasses() {
+        if (!this.messageType) return '';
+        const baseClasses = 'slds-scoped-notification slds-media slds-media_center';
+        switch(this.messageType) {
+            case 'success':
+                return `${baseClasses} slds-scoped-notification_light slds-theme_success`;
+            case 'error':
+                return `${baseClasses} slds-scoped-notification_light slds-theme_error`;
+            case 'warning':
+                return `${baseClasses} slds-scoped-notification_light slds-theme_warning`;
+            default:
+                return baseClasses;
+        }
+    }
+
+    // Get icon name based on message type
+    get messageIcon() {
+        switch(this.messageType) {
+            case 'success':
+                return 'utility:success';
+            case 'error':
+                return 'utility:error';
+            case 'warning':
+                return 'utility:warning';
+            default:
+                return 'utility:info';
+        }
+    }
 
     connectedCallback() {
         this.loadQuoteData();
@@ -25,31 +80,27 @@ export default class AddProductsCustomLwc extends NavigationMixin(LightningEleme
     async loadQuoteData() {
         this.isLoading = true;
         try {
-            console.log('Record Id: ' + this.recordId);
-            
             const quoteResult = await getQuoteDetails({ quoteId: this.recordId });
-            console.log('Quote:', quoteResult);
             
             this.quote = quoteResult;
             this.productName = quoteResult.ProductName;
+            console.log('>> quote: ' + JSON.stringify(quoteResult));
             
-            console.log('Product Name: ' + quoteResult.ProductName);
             
             const productId = quoteResult.MV_Product_Id;
-            console.log('Product Id: ' + productId);
             
             if (productId) {
                 const planResult = await getProductPlans({ productId });
+                console.log('>> planResult: ' + JSON.stringify(planResult));
                 this.productPlans = planResult;
                 this.productPlanOptions = planResult.map(p => ({ 
                     label: p.label, 
                     value: p.value 
                 }));
-                console.log('Product Plans:', JSON.stringify(this.productPlans));
             }
         } catch (error) {
             console.error('Error loading data', error);
-            this.showToast('Error', 'Failed to load quote details', 'error');
+            this.showMessage('Failed to load quote details', 'error');
         } finally {
             this.isLoading = false;
         }
@@ -57,6 +108,8 @@ export default class AddProductsCustomLwc extends NavigationMixin(LightningEleme
 
     handlePlanChange(event) {
         this.selectedPlanId = event.target.value;
+        console.log('>> selectedPlanId: ' + this.selectedPlanId);
+        
         const selected = this.productPlans.find(p => p.value === this.selectedPlanId);
         this.listPrice = selected ? parseFloat(selected.price) : 0;
         
@@ -73,34 +126,19 @@ export default class AddProductsCustomLwc extends NavigationMixin(LightningEleme
     handleDiscountChange(event) {
         const discountValue = event.target.value;
         this.discount = discountValue ? parseFloat(discountValue) : 0;
+        this.clearMessage();
     }
 
     handleDescriptionChange(event) {
         this.description = event.target.value;
     }
 
-    // Computed property for calculated price
-    get calculatedPrice() {
-        if (!this.listPrice) return null;
-        const finalPrice = this.listPrice - (this.discount || 0);
-        return finalPrice.toFixed(2);
-    }
-
-    // Check if save button should be disabled
-    get isDisabled() {
-        return !this.selectedPlanId || this.isLoading;
-    }
-
     async handleSave() {
-        // Validate required fields
-        if (!this.selectedPlanId) {
-            this.showToast('Validation Error', 'Please select a Product Plan', 'error');
-            return;
-        }
-
-        // Additional validation - ensure discount doesn't exceed list price
-        if (this.discount && this.discount > this.listPrice) {
-            this.showToast('Validation Error', 'Discount cannot exceed the list price', 'error');
+        // Additional validation - ensure discount doesn't exceed 100%
+        if (this.discount && this.discount > 100) {
+            console.log('Invalid discount value: ' + this.discount);
+            
+            this.showMessage('Validation Error - Discount cannot exceed 100%', 'error');
             return;
         }
 
@@ -114,14 +152,14 @@ export default class AddProductsCustomLwc extends NavigationMixin(LightningEleme
                 description: this.description
             });
             
-            this.showToast('Success', 'Quote Line Item created successfully', 'success');
+            this.showMessage('Quote Line Item created successfully', 'success');
             
             // Navigate to the created record
             window.location.href = '/' + qliId;
             
         } catch (error) {
             console.error('Error creating QLI', error);
-            this.showToast('Error', 'Failed to create Quote Line Item. Please try again.', 'error');
+            this.showMessage('Failed to create Quote Line Item. Please try again.', 'error');
         } finally {
             this.isLoading = false;
         }
@@ -132,13 +170,16 @@ export default class AddProductsCustomLwc extends NavigationMixin(LightningEleme
         window.location.href = '/' + this.recordId;
     }
 
-    showToast(title, message, variant) {
-        const event = new ShowToastEvent({
-            title,
-            message,
-            variant,
-            mode: variant === 'error' ? 'sticky' : 'dismissible'
-        });
-        this.dispatchEvent(event);
+    showMessage(message, type) {
+        if (!message || !type) return;
+        console.log('>> message: ' + message + ', type: ' + type);
+        
+        this.message = message;
+        this.messageType = type;
+    }
+
+    clearMessage() {
+        this.message = '';
+        this.messageType = '';
     }
 }

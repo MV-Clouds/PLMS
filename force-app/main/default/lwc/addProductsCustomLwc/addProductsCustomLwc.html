@@ -1,4 +1,3 @@
-<!-- newQuoteLineItem.html -->
 <template>
     <div class="slds-page-header slds-page-header_record-home">
         <div class="slds-page-header__row">
@@ -6,7 +5,7 @@
                 <div class="slds-media">
                     <div class="slds-media__figure">
                         <span class="slds-icon_container slds-icon-standard-quote-line-item">
-                            <lightning-icon icon-name="standard:quote" size="medium"></lightning-icon>
+                            <lightning-icon icon-name="standard:quotes" size="medium"></lightning-icon>
                         </span>
                     </div>
                     <div class="slds-media__body">
@@ -31,38 +30,21 @@
                 <div class="slds-card__body slds-card__body_inner">
                     <div class="slds-grid slds-gutters slds-wrap">
                         <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-input 
-                                label="Quote Name" 
-                                value={quote.Name} 
-                                readonly
-                                class="readonly-field">
-                            </lightning-input>
+                            <lightning-input label="Quote Name" value={quote.Name} readonly class="readonly-field"></lightning-input>
                         </div>
                         <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-input 
-                                label="Product Name" 
-                                value={productName} 
-                                readonly
-                                class="readonly-field">
-                            </lightning-input>
+                            <lightning-input label="Product Name" value={productName} readonly class="readonly-field"></lightning-input>
                         </div>
                     </div>
                 </div>
             </lightning-card>
 
             <!-- Product Configuration Section -->
-            <lightning-card title="Product Configuration" icon-name="standard:product" class="slds-m-top_medium">
+            <lightning-card title="Product Plan Configuration" icon-name="standard:product" class="slds-m-top_medium">
                 <div class="slds-card__body slds-card__body_inner">
                     <div class="slds-grid slds-gutters slds-wrap">
                         <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-combobox
-                                label="Product Plan"
-                                value={selectedPlanId}
-                                options={productPlanOptions}
-                                onchange={handlePlanChange}
-                                required
-                                placeholder="Select a product plan"
-                                message-when-value-missing="Please select a product plan">
+                            <lightning-combobox label="Product Plan" value={selectedPlanId} options={productPlanOptions} onchange={handlePlanChange} required placeholder="Select a product plan" message-when-value-missing="Please select a product plan">
                                 <span slot="label">
                                     Product Plan <span class="slds-required">*</span>
                                 </span>
@@ -70,27 +52,10 @@
                         </div>
                         <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
                             <template if:true={listPrice}>
-                                <div class="price-container">
-                                    <label class="slds-form-element__label">List Price</label>
-                                    <div class="slds-form-element__control">
-                                        <div class="price-display slds-box slds-theme_default">
-                                            <div class="price-value slds-text-heading_large slds-text-color_success">
-                                                ${listPrice}
-                                            </div>
-                                            <div class="price-label slds-text-body_small slds-text-color_weak">
-                                                Base Price
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <lightning-input label="List Price" value={formattedListPrice} readonly class="readonly-field"></lightning-input>
                             </template>
                             <template if:false={listPrice}>
-                                <lightning-input 
-                                    label="List Price" 
-                                    value="Select a product plan to view price" 
-                                    readonly
-                                    class="readonly-field">
-                                </lightning-input>
+                                <lightning-input label="List Price" value="Select a product plan to view price" readonly class="readonly-field"></lightning-input>
                             </template>
                         </div>
                     </div>
@@ -102,47 +67,17 @@
                 <div class="slds-card__body slds-card__body_inner">
                     <div class="slds-grid slds-gutters slds-wrap">
                         <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-input 
-                                type="number"
-                                step="0.01"
-                                label="Discount"
-                                value={discount}
-                                onchange={handleDiscountChange}
-                                placeholder="Enter discount amount"
-                                field-level-help="Enter the discount amount to be applied to this line item">
-                            </lightning-input>
+                            <lightning-input type="number" step="0.01" label="Discount (%)" value={discount} onchange={handleDiscountChange} placeholder="Enter discount percentage" field-level-help="Enter the discount percentage to be applied to this line item"></lightning-input>
                         </div>
                         <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <template if:true={calculatedPrice}>
-                                <div class="final-price-container">
-                                    <label class="slds-form-element__label">Final Price</label>
-                                    <div class="slds-form-element__control">
-                                        <div class="final-price-display slds-box slds-theme_inverse">
-                                            <div class="final-price-value slds-text-heading_large">
-                                                ${calculatedPrice}
-                                            </div>
-                                            <div class="final-price-label slds-text-body_small">
-                                                After Discount
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
+                            <lightning-input label="Final Price" value={formattedFinalPrice} readonly class="readonly-field"></lightning-input>
                         </div>
                         <div class="slds-col slds-size_1-of-1">
-                            <lightning-textarea 
-                                label="Description"
-                                maxlength="255"
-                                value={description}
-                                onchange={handleDescriptionChange}
-                                placeholder="Enter additional details or notes for this line item"
-                                field-level-help="Optional description for this quote line item (255 characters max)">
-                            </lightning-textarea>
+                            <lightning-textarea label="Description" maxlength="255" value={description} onchange={handleDescriptionChange} placeholder="Enter additional details or notes for this line item" field-level-help="Optional description for this quote line item (255 characters max)"></lightning-textarea>
                         </div>
                     </div>
                 </div>
             </lightning-card>
-
         </template>
 
         <template if:false={quote}>
@@ -158,24 +93,28 @@
 
         <!-- Action Buttons -->
         <div class="slds-docked-form-footer">
-            <div class="slds-grid slds-grid_align-spread slds-p-around_medium">
+            <!-- Inline Message Display -->
+            <template if:true={message}>
+                <div class="slds-p-horizontal_medium slds-p-top_small notification-div">
+                    <div class={messageClasses} role="status">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name={messageIcon} size="small" variant="inverse"></lightning-icon>
+                        </div>
+                        <div class="slds-media__body">
+                            <p>{message}</p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <div class="slds-grid slds-grid_align-spread slds-p-around_medium buttons-div">
                 <div></div> <!-- Empty div for spacing -->
                 <div class="slds-grid slds-gutters_small">
                     <div class="slds-col">
-                        <lightning-button 
-                            variant="neutral" 
-                            label="Cancel" 
-                            onclick={handleCancel}
-                            class="slds-m-right_small">
-                        </lightning-button>
+                        <lightning-button variant="neutral" label="Cancel" onclick={handleCancel}></lightning-button>
                     </div>
                     <div class="slds-col">
-                        <lightning-button 
-                            variant="brand" 
-                            label="Save Quote Line Item" 
-                            onclick={handleSave}
-                            disabled={isDisabled}>
-                        </lightning-button>
+                        <lightning-button variant="brand" label="Save" onclick={handleSave} disabled={isDisabled}></lightning-button>
                     </div>
                 </div>
             </div>
