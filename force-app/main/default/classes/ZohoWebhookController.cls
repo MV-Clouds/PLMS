@@ -43,7 +43,7 @@ global without sharing class ZohoWebhookController {
             System.debug('Estimate Details: ' + estimate);
 
             // Example: Extracting specific fields from the estimate
-            String estimateNumber = (String)estimate.get('estimate_number');
+            String estimateNumber = (String)estimate.get('reference_number');
             String status = (String)estimate.get('status_formatted');
             System.debug('Estimate Number: ' + estimateNumber);
             System.debug('Status: ' + status);
@@ -82,7 +82,7 @@ global without sharing class ZohoWebhookController {
             System.debug('Invoice Details: ' + invoice);
 
             // Example: Extracting specific fields from the invoice
-            String invoiceNumber = (String)invoice.get('invoice_number');
+            String invoiceNumber = (String)invoice.get('reference_number');
             String status = (String)invoice.get('status_formatted');
             System.debug('Invoice Number: ' + invoiceNumber);
             System.debug('Status: ' + status);
