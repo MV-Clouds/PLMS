@@ -84,8 +84,8 @@ public with sharing class ZohoBillingService {
     private static final String ITEMS_ENDPOINT = '/billing/v1/items';
     private static final String QUOTES_ENDPOINT = '/billing/v1/estimates';
     private static final String INVOICES_ENDPOINT = '/billing/v1/invoices';
-
-
+    
+    
     // ===============================
     // COMMON HTTP CALLOUT METHOD
     // ===============================
@@ -126,7 +126,7 @@ public with sharing class ZohoBillingService {
             
         } catch (Exception ex) {
             System.debug('Error in makeZohoCallout: ' + ex.getMessage());
-            throw new ZohoBillingException('Error making Zoho API call: ' + ex.getMessage());
+            throw new ZohoBillingException('Error making Zoho API call to ' + params.endpoint + ' with method ' + params.httpMethod + ': ' + ex.getMessage());
         }
     }
     
@@ -140,7 +140,6 @@ public with sharing class ZohoBillingService {
         // Validate required fields
         List<String> missingFields = ZohoBillingUtils.validateCustomerRequiredFields(account);
         if (!missingFields.isEmpty()) {
-            System.debug('❗ mising fields'+ missingFields);
             throw new ZohoBillingException('Missing required fields for customer creation: ' + String.join(missingFields, ', '));
         }
         
@@ -158,12 +157,13 @@ public with sharing class ZohoBillingService {
                 return customerId;
             } else {
                 String errorMsg = 'Failed to create customer in Zoho Billing: ' + response.getBody();
-                ZohoBillingUtils.logIntegrationActivity('CREATE_CUSTOMER', account.Id, null, false, errorMsg);
                 throw new ZohoBillingException(errorMsg);
             }
         } catch (Exception ex) {
             ZohoBillingUtils.logIntegrationActivity('CREATE_CUSTOMER', account.Id, null, false, ex.getMessage());
-            throw new ZohoBillingException('Error creating customer: ' + ex.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'createCustomer', ex);
+            sendExceptionEmail(body);
+            throw new ZohoBillingException('Error creating customer for Account ID ' + account.Id + ': ' + ex.getMessage());
         }
     }
     
@@ -184,7 +184,9 @@ public with sharing class ZohoBillingService {
             }
         } catch (Exception ex) {
             System.debug('Exception in updateCustomer: ' + ex.getMessage());
-            throw new ZohoBillingException('Error updating customer: ' + ex.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'updateCustomer', ex);
+            sendExceptionEmail(body);
+            throw new ZohoBillingException('Error updating customer for Account ID ' + account.Id + ' and Customer ID ' + customerId + ': ' + ex.getMessage());
         }
     }
     
@@ -221,7 +223,9 @@ public with sharing class ZohoBillingService {
             }
         } catch (Exception ex) {
             System.debug('Error creating item: ' + ex.getMessage());
-            throw new ZohoBillingException('Error Create item: ' + ex.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'createItem', ex);
+            sendExceptionEmail(body);
+            throw new ZohoBillingException('Error creating item for Product Plan ID ' + productPlan.Id + ': ' + ex.getMessage());
         }
     }
     
@@ -242,7 +246,9 @@ public with sharing class ZohoBillingService {
             }
         } catch (Exception ex) {
             System.debug('Exception in updateItem: ' + ex.getMessage());
-            throw new ZohoBillingException('Error updating item: ' + ex.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'updateItem', ex);
+            sendExceptionEmail(body);
+            throw new ZohoBillingException('Error updating item for Product Plan ID ' + productPlan.Id + ' and Item ID ' + itemId + ': ' + ex.getMessage());
         }
     }
     
@@ -266,7 +272,7 @@ public with sharing class ZohoBillingService {
         if (String.isNotBlank(account.Phone)) {
             customerData.put('phone', ZohoBillingUtils.sanitizeForZoho(account.Phone, 20));
         }
-
+        
         if (String.isNotBlank(account.Description)) {
             customerData.put('notes', ZohoBillingUtils.sanitizeForZoho(account.Description, 2000));
         }
@@ -335,16 +341,13 @@ public with sharing class ZohoBillingService {
                 runtimeIds.currentZohoCustomerId = acc.Zoho_Customer_Id__c;
             } else {
                 // Create new customer and store in runtime variable
-                System.debug('🔄 Creating missing Zoho customer for: ' + acc.Name);
                 String newCustomerId = createCustomer(acc);
                 if (String.isNotBlank(newCustomerId)) {
                     runtimeIds.currentZohoCustomerId = newCustomerId;
                     updateTracker.newZohoCustomerId = newCustomerId;
                     updateTracker.accountNeedsUpdate = true;
-                    System.debug('✅ Created new Zoho customer ID: ' + newCustomerId);
                 } else {
-                    System.debug('❗ Failed to create Zoho customer');
-                    return;
+                    throw new ZohoBillingException('Failed to create Zoho customer : '+ acc.Id);
                 }
             }
             
@@ -362,10 +365,8 @@ public with sharing class ZohoBillingService {
                         runtimeIds.currentZohoItemIds.put(productPlanId, newItemId);
                         updateTracker.productPlanToZohoItemId.put(productPlanId, newItemId);
                         updateTracker.itemsNeedingUpdate.add(productPlanId);
-                        System.debug('✅ Created new Zoho item ID: ' + newItemId);
                     } else {
-                        System.debug('❗ Failed to create Zoho item for: ' + lineItem.Product_Plan__r.Name);
-                        return;
+                        throw new ZohoBillingException('Failed to create Zoho item for: ' + lineItem.Product_Plan__r.Name);
                     }
                 }
             }
@@ -416,11 +417,10 @@ public with sharing class ZohoBillingService {
             }
             
         } catch (Exception e) {
-            System.debug('Error in sendEmailQuote: ' + e.getMessage());
-            System.debug('Error in sendEmailQuote: ' + e.getLineNumber());
             // Log the error for debugging
             ZohoBillingUtils.logIntegrationActivity('SEND_EMAIL_QUOTE', quoteId, null, false, e.getMessage());
-            throw new ZohoBillingException('Error sending email quote: ' + e.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'sendEmailQuote', e);
+            sendExceptionEmail(body);
         }
     }
     
@@ -452,16 +452,13 @@ public with sharing class ZohoBillingService {
                 runtimeIds.currentZohoCustomerId = acc.Zoho_Customer_Id__c;
             } else {
                 // Create new customer and store in runtime variable
-                System.debug('🔄 Creating missing Zoho customer for: ' + acc.Name);
                 String newCustomerId = createCustomer(acc);
                 if (String.isNotBlank(newCustomerId)) {
                     runtimeIds.currentZohoCustomerId = newCustomerId;
                     updateTracker.newZohoCustomerId = newCustomerId;
                     updateTracker.accountNeedsUpdate = true;
-                    System.debug('✅ Created new Zoho customer ID: ' + newCustomerId);
                 } else {
-                    System.debug('❗ Failed to create Zoho customer');
-                    return;
+                    throw new ZohoBillingException('Failed to create Zoho customer');
                 }
             }
             
@@ -482,7 +479,7 @@ public with sharing class ZohoBillingService {
                         System.debug('✅ Created new Zoho item ID: ' + newItemId);
                     } else {
                         System.debug('❗ Failed to create Zoho item for: ' + lineItem.Product_Plan__r.Name);
-                        return;
+                        throw new ZohoBillingException('Failed to create Zoho item for: ' + lineItem.Product_Plan__r.Name);
                     }
                 }
             }
@@ -491,7 +488,7 @@ public with sharing class ZohoBillingService {
             Map<String, Object> zohoItems = getAllZohoItems();
             if (zohoItems == null) {
                 System.debug('Failed to retrieve Zoho items');
-                return;
+                throw new ZohoBillingException('Failed to retrieve Zoho items');
             }
             
             // Step 5: Update line items in memory with runtime IDs for quote processing
@@ -524,6 +521,8 @@ public with sharing class ZohoBillingService {
             
         } catch (Exception e) {
             System.debug('Error in createOrUpdateQuote: ' + e.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'createOrUpdateQuote', e);
+            sendExceptionEmail(body);
         }
     }
     
@@ -666,6 +665,7 @@ public with sharing class ZohoBillingService {
             
         } catch (Exception e) {
             System.debug('❗ Error updating records with Zoho IDs: ' + e.getMessage());
+            throw new ZohoBillingException('Error updating records with Zoho IDs: ' + e.getMessage());
         }
     }
     
@@ -728,7 +728,6 @@ public with sharing class ZohoBillingService {
                 return null;
             }
         } catch (Exception ex) {
-            System.debug('Error getting Zoho items: ' + ex.getMessage());
             return null;
         }
     }
@@ -799,10 +798,11 @@ public with sharing class ZohoBillingService {
             HttpResponse response = makeZohoCallout(params);
             
             if (response.getStatusCode() != 200) {
-                System.debug('Failed to send quote email: ' + response.getBody());
+                throw new ZohoBillingException('Failed to send quote email: ' + response.getBody());
             }
         } catch (Exception ex) {
-            System.debug('Error sending quote email: ' + ex.getMessage());
+            String body = errorMailBody('ZohoBillingService' ,'sendQuoteEmail', ex);
+            sendExceptionEmail(body);
         }
     }
     
@@ -963,7 +963,7 @@ public with sharing class ZohoBillingService {
                 updateInvoiceStatus(invoiceId, 'Sent');
                 
             } else {
-                System.debug('Failed to create invoice in Zoho for: ' + invoiceId);
+                throw new ZohoBillingException('Failed to create invoice in Zoho');
             }
             
         } catch (Exception e) {
@@ -971,6 +971,8 @@ public with sharing class ZohoBillingService {
             System.debug('Stack trace: ' + e.getStackTraceString());
             // Log the error for debugging
             ZohoBillingUtils.logIntegrationActivity('CREATE_AND_SEND_INVOICE', invoiceId, null, false, e.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'createAndSendInvoice', e);
+            sendExceptionEmail(body);
             throw new ZohoBillingException('Error creating and sending invoice: ' + e.getMessage());
         }
     }
@@ -1113,9 +1115,11 @@ public with sharing class ZohoBillingService {
                 System.debug('Invoice emailed successfully: ' + zohoInvoiceId);
             } else {
                 System.debug('Failed to email invoice. Status: ' + response.getStatusCode() + ', Body: ' + response.getBody());
+                throw new  ZohoBillingException('Failed to email invoice. Status: ' + response.getStatusCode() + ', Body: ' + response.getBody());
             }
         } catch (Exception e) {
             System.debug('Error emailing invoice: ' + e.getMessage());
+            throw new  ZohoBillingException('Error emailing invoice: ' + e.getMessage());
         }
     }
     
@@ -1205,6 +1209,8 @@ public with sharing class ZohoBillingService {
             
         } catch (Exception e) {
             System.debug('Error updating invoice status: ' + e.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'updateInvoiceStatus', e);
+            sendExceptionEmail(body);
         }
     }
     /**
@@ -1223,6 +1229,8 @@ public with sharing class ZohoBillingService {
             }
         } catch (Exception e) {
             System.debug('Error updating invoice: ' + e.getMessage());
+            String body = errorMailBody('ZohoBillingService', 'updateInvoiceInZoho', e);
+            sendExceptionEmail(body);
         }
     }
     
@@ -1290,6 +1298,8 @@ public with sharing class ZohoBillingService {
         } catch (Exception e) {
             System.debug('Error in createInvoiceOnly: ' + e.getMessage());
             System.debug('Stack trace: ' + e.getStackTraceString());
+            String body = errorMailBody('ZohoBillingService', 'createInvoiceOnly', e);
+            sendExceptionEmail(body);
         }
     }
     
@@ -1322,6 +1332,42 @@ public with sharing class ZohoBillingService {
         } catch (Exception e) {
             System.debug('Error in sendInvoiceEmail: ' + e.getMessage());
             System.debug('Stack trace: ' + e.getStackTraceString());
+            String body = errorMailBody('ZohoBillingService', 'sendInvoiceEmail', e);
+            sendExceptionEmail(body);
+        }
+    }
+    
+    
+    
+    
+    public static String errorMailBody(String apexClass, String methodName, Exception e){
+        String body =  'Hello,<br/><br/>An Error occurred executing in <br/><br/>Apex Class - '
+            + apexClass + '.<br/>Method Name - '
+            +methodName +'.<br/>Exception Message : ' +
+            e.getMessage() + '<br/>Exception Line Number : ' +
+            e.getLineNumber() + '<br/>Stack Trace : ' +
+            e.getStackTraceString() + '<br/>Regards,<br/>PLMS Team';
+        return body;
+    }
+    
+    /*
+     * Sends an email to recipients specified in the custom label 'ExceptionEmailRecipients'
+     * @param emailBody The HTML body of the email
+     */
+    
+    public static void sendExceptionEmail(String emailBody) {
+        try {
+            String recipients = System.Label.ExceptionEmailRecipients;
+            List<String> toAddresses = recipients.split(',');
+            
+            Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+            mail.setToAddresses(toAddresses);
+            mail.setSubject('Exception Notification'); // Default subject, can be customized if needed
+            mail.setHtmlBody(emailBody);
+            
+            Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{mail});
+        } catch (Exception e) {
+            System.debug('Error sending exception email: ' + e.getMessage());
         }
     }
     
@@ -1329,4 +1375,8 @@ public with sharing class ZohoBillingService {
      * Custom exception class for Zoho Billing errors
      */
     public class ZohoBillingException extends Exception {}
+    
+    
+    
+    
 }
