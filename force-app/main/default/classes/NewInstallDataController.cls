@@ -73,6 +73,7 @@ public with sharing class NewInstallDataController implements Messaging.InboundE
                 opp.AccountId = orgAccount.Id;
                 opp.CloseDate = Date.valueOf(newInstallData.Expiration_DateTime__c);
                 opp.StageName = 'New';
+                opp.MV_Product__c = productRecs[0].Id;
                 opp.Product_Subscriber_Detail_JSON__c = JSON.serialize(newInstallData);
 
                 Id rtId = Schema.SObjectType.Opportunity.getRecordTypeInfosByDeveloperName().get('Customer').getRecordTypeId();
