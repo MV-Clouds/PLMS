@@ -52,7 +52,7 @@ global without sharing class ZohoWebhookController {
             if (estimateNumber != null && status != null && status == 'Accepted') {
                 System.debug('Processing approved estimate: ' + estimateNumber);
                 // Implement your logic to handle the approved estimate
-                List<Quote> quoteRec = [SELECT Id, Name, QuoteNumber, Status, Contract_Start_Date__c, AccountId FROM Quote WHERE QuoteNumber = :estimateNumber LIMIT 1];
+                List<Quote> quoteRec = [SELECT Id, Name, QuoteNumber, Status, Contract_Start_Date__c, AccountId, OpportunityId FROM Quote WHERE QuoteNumber = :estimateNumber LIMIT 1];
                 if (!quoteRec.isEmpty()) {
                     Quote quoteToUpdate = quoteRec[0];
                     quoteToUpdate.Status = 'Accepted';
@@ -63,6 +63,8 @@ global without sharing class ZohoWebhookController {
                     cont.StartDate = quoteToUpdate.Contract_Start_Date__c;
                     cont.AccountId = quoteToUpdate.AccountId;
                     cont.ContractTerm = 1;
+                    cont.Quote__c = quoteToUpdate.Id;
+                    cont.Opportunity__c = quoteToUpdate.OpportunityId;
                     cont.Status = 'Draft';
                     insert cont;
                 } else {
@@ -91,7 +93,7 @@ global without sharing class ZohoWebhookController {
             if (invoiceNumber != null && status != null && status == 'Paid') {
                 System.debug('Processing paid invoice: ' + invoiceNumber);
                 // Implement your logic to handle the paid invoice
-                List<Invoice__c> invoiceRec = [SELECT Id, Name, Status__c, Product_Subscriber__c FROM Invoice__c WHERE Name = :invoiceNumber LIMIT 1];
+                List<Invoice__c> invoiceRec = [SELECT Id, Name, Status__c, Product_Subscriber__c, Start_Date__c FROM Invoice__c WHERE Name = :invoiceNumber LIMIT 1];
                 if (!invoiceRec.isEmpty()) {
                     Invoice__c invoiceToUpdate = invoiceRec[0];
                     invoiceToUpdate.Status__c = 'Paid';
@@ -99,7 +101,7 @@ global without sharing class ZohoWebhookController {
                     System.debug('Invoice updated successfully: ' + invoiceToUpdate);
 
                     // fetch product subscriber records related to this invoice
-                    List<Product_Subscriber__c> psRecords = [ SELECT Id, Expiration_DateTime__c, Active__c, Product_Plan__c FROM Product_Subscriber__c WHERE Id = :invoiceRec[0].Product_Subscriber__c AND Active__c = true ORDER BY CreatedDate DESC LIMIT 1];
+                    List<Product_Subscriber__c> psRecords = [ SELECT Id, Expiration_DateTime__c, Active__c, Product_Plan__c, Is_Temp_Expiry__c FROM Product_Subscriber__c WHERE Id = :invoiceRec[0].Product_Subscriber__c AND Active__c = true ORDER BY CreatedDate DESC LIMIT 1];
                     if (!psRecords.isEmpty()) {
                         Product_Subscriber__c psRecord = psRecords[0];
                         System.debug('Found product subscriber: ' + psRecord);
@@ -114,11 +116,13 @@ global without sharing class ZohoWebhookController {
                                 Integer duration = ppRecord.Duration__c != null ? (Integer)ppRecord.Duration__c : 0;
     
                                 // Add months to today’s date
-                                Date futureDate = System.today().addMonths(duration);
+                                Date futureDate = invoiceToUpdate.Start_Date__c.addMonths(duration);
                                 // Build a 10:00 AM time
                                 Time tenAM = Time.newInstance(10, 0, 0, 0);
                                 // Combine into DateTime
                                 psRecord.Expiration_DateTime__c = DateTime.newInstance(futureDate, tenAM);
+
+                                psRecord.Is_Temp_Expiry__c = false;
     
                                 update psRecord;
                                 System.debug('Product subscriber updated successfully: ' + psRecord);
