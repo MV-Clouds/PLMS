@@ -2,23 +2,11 @@
 public class ZohoWebhookControllerTest {
     
     @IsTest
-    static void testGetMethod() {
-        RestRequest req = new RestRequest();
-        RestResponse res = new RestResponse();
-        req.httpMethod = 'GET';
-        req.requestURI = '/services/apexrest/webhook/zoho/test-get';
-        RestContext.request = req;
-        RestContext.response = res;
-
-        ZohoWebhookController.getProductSubscriber();
-    }
-    
-    @IsTest
-    static void testPostQuoteApproved() {
+    static void testPostQuote() {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
         req.httpMethod = 'POST';
-        req.requestURI = '/services/apexrest/webhook/zoho/quote-approved';
+        req.requestURI = '/services/apexrest/webhook/zoho/quote';
         
         Account acc = new Account(Name='Test Account');
         insert acc;
@@ -43,11 +31,11 @@ public class ZohoWebhookControllerTest {
     }
     
     @IsTest
-    static void testPostInvoicePaid() {
+    static void testPostInvoice() {
         RestRequest req = new RestRequest();
         RestResponse res = new RestResponse();
         req.httpMethod = 'POST';
-        req.requestURI = '/services/apexrest/webhook/zoho/invoice-paid';
+        req.requestURI = '/services/apexrest/webhook/zoho/invoice';
         
         // Setup related records
         Account acc = new Account(Name='Test Account');
