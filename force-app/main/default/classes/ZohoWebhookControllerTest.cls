@@ -21,7 +21,7 @@ public class ZohoWebhookControllerTest {
         q = [SELECT QuoteNumber FROM Quote WHERE Id = :q.Id];
         String quoteNumber = q.QuoteNumber;
 
-        String body = '{"estimate":{"estimate_number":"'+quoteNumber+'","status_formatted":"Accepted"}}';
+        String body = '{"estimate":{"reference_number":"'+quoteNumber+'","status_formatted":"Accepted"}}';
         req.requestBody = Blob.valueOf(body);
         
         RestContext.request = req;
@@ -41,13 +41,37 @@ public class ZohoWebhookControllerTest {
         Account acc = new Account(Name='Test Account');
         insert acc;
 
-        Product__c prod = new Product__c(Name='Test Product');
+        // Create Custom Product__c (your lookup in Quote)
+        Product__c prod = new Product__c(
+            Name = 'Custom Product'
+        );
         insert prod;
 
-        PriceBook2 pb = new PriceBook2(Name='Standard Price Book', IsActive=true);
-        insert pb;
-        
-        Product_Plan__c plan = new Product_Plan__c(Name='Test Plan', Product__c=prod.Id, Price__c=100);
+        Id pricebookId = Test.getStandardPricebookId();
+        Pricebook2 standardPricebook = new Pricebook2(
+            Id = pricebookId,
+            IsActive = true
+        );
+        upsert standardPricebook;
+
+        // fetch mvproduct 
+        Product__c mvProduct = [SELECT Id, Product__c FROM Product__c WHERE Name = 'Custom Product' LIMIT 1];
+
+        PricebookEntry pbe = new PricebookEntry(
+            Pricebook2Id = standardPricebook.Id,
+            Product2Id = mvProduct.Product__c,
+            UnitPrice = 100,
+            IsActive = true
+        );
+        insert pbe;
+
+        // Create Product Plan
+        Product_Plan__c plan = new Product_Plan__c(
+            Name = 'Basic Plan',
+            Price__c = 99,
+            Product__c = mvProduct.Id,
+            Price_Book__c = standardPricebook.Id
+        );
         insert plan;
         
         Product_Subscriber__c ps = new Product_Subscriber__c(
@@ -58,18 +82,19 @@ public class ZohoWebhookControllerTest {
         );
         insert ps;
         
-        Invoice__c inv = new Invoice__c(Status__c='Paid', Product_Subscriber__c=ps.Id);
+        Invoice__c inv = new Invoice__c(Status__c='Paid', Product_Subscriber__c=ps.Id, Start_Date__c = System.today());
         insert inv;
 
         inv = [SELECT Id, Name FROM Invoice__c WHERE Id = :inv.Id];
 
-        String body = '{"invoice":{"invoice_number":"'+inv.Name+'","status_formatted":"Paid"}}';
+        String body = '{"invoice":{"reference_number":"'+inv.Name+'","status_formatted":"Paid"}}';
         req.requestBody = Blob.valueOf(body);
         
         RestContext.request = req;
         RestContext.response = res;
         
         ZohoWebhookController.handleZohoWebhook();
+        ZohoWebhookController.sendEmail('Test');
     }
     
     @IsTest
