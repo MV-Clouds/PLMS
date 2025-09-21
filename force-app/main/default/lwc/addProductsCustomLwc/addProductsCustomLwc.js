@@ -2,6 +2,7 @@ import { LightningElement, api, track } from 'lwc';
 import getQuoteDetails from '@salesforce/apex/AddProductsCustomLwcController.getQuoteDetails';
 import getProductPlans from '@salesforce/apex/AddProductsCustomLwcController.getProductPlans';
 import createQuoteLineItem from '@salesforce/apex/AddProductsCustomLwcController.createQuoteLineItem';
+import createServiceQuoteLineItems from '@salesforce/apex/AddProductsCustomLwcController.createServiceQuoteLineItems';
 
 export default class AddProductsCustomLwc extends LightningElement {
     @api recordId;
@@ -16,20 +17,24 @@ export default class AddProductsCustomLwc extends LightningElement {
     @track isLoading = false;
     @track message;
     @track messageType;
+    @track showProductLayout = true; // true for product layout, false for service layout
+    @track serviceRows = []; // Array of service line items
 
-    // Computed property for formatted list price
+    connectedCallback() {
+        this.loadQuoteData();
+    }
+
+    // Computed properties for product layout
     get formattedListPrice() {
         if (!this.listPrice) return 'Select a product plan to view price';
         return `${this.listPrice.toFixed(2)}`;
     }
 
-    // Computed property for formatted final price
     get formattedFinalPrice() {
         if (!this.calculatedPrice) return 'Select a product plan to view price';
         return `${this.calculatedPrice}`;
     }
 
-    // Computed property for calculated price
     get calculatedPrice() {
         if (!this.listPrice) return null;
         const discountPercent = this.discount || 0;
@@ -40,7 +45,53 @@ export default class AddProductsCustomLwc extends LightningElement {
 
     // Check if save button should be disabled
     get isDisabled() {
-        return !this.selectedPlanId || this.isLoading;
+        if (this.showProductLayout) {
+            return !this.selectedPlanId || this.isLoading;
+        } else {
+            // For service layout, check if at least one row is valid
+            return this.isLoading || !this.isServiceDataValid();
+        }
+    }
+
+    // Service layout computed properties
+    get pageTitle() {
+        return this.showProductLayout ? 'New Quote Line Item' : 'New Service Line Items';
+    }
+
+    get pageDescription() {
+        return this.showProductLayout ? 'Add a new line item to your quote' : 'Add service line items to your quote';
+    }
+
+    // Check if service data is valid
+    isServiceDataValid() {
+        if (!this.serviceRows || this.serviceRows.length === 0) return false;
+        
+        return this.serviceRows.every(row => 
+            row.title && row.title.trim() !== '' &&
+            row.quantityHours && row.quantityHours > 0 &&
+            row.pricePerHour && row.pricePerHour > 0
+        );
+    }
+
+    // Initialize service rows
+    initializeServiceRows() {
+        this.serviceRows = [{
+            id: this.generateRowId(),
+            title: '',
+            description: '',
+            quantityHours: null,
+            pricePerHour: null,
+            totalPrice: 0
+        }];
+    }
+
+    generateRowId() {
+        return 'row_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    }
+
+    // Check if only one service row exists (disable removal)
+    get isOneRowDisabled() {
+        return this.serviceRows.length === 1;
     }
 
     // Get CSS classes for message styling
@@ -73,10 +124,6 @@ export default class AddProductsCustomLwc extends LightningElement {
         }
     }
 
-    connectedCallback() {
-        this.loadQuoteData();
-    }
-
     async loadQuoteData() {
         this.isLoading = true;
         try {
@@ -86,17 +133,31 @@ export default class AddProductsCustomLwc extends LightningElement {
             this.productName = quoteResult.ProductName;
             console.log('>> quote: ' + JSON.stringify(quoteResult));
             
+            // Determine which layout to show
+            // Service quotes should always show service layout
+            // Product quotes show service layout only if they already have product lines
+            if (quoteResult.isServiceQuote) {
+                this.showProductLayout = false; // Service quotes always use service layout
+            } else {
+                this.showProductLayout = !quoteResult.hasProductLine; // Product quotes use service layout only if they have product lines
+            }
             
-            const productId = quoteResult.MV_Product_Id;
-            
-            if (productId) {
-                const planResult = await getProductPlans({ productId });
-                console.log('>> planResult: ' + JSON.stringify(planResult));
-                this.productPlans = planResult;
-                this.productPlanOptions = planResult.map(p => ({ 
-                    label: p.label, 
-                    value: p.value 
-                }));
+            if (!this.showProductLayout) {
+                // Initialize service rows for service layout
+                this.initializeServiceRows();
+            } else {
+                // Load product plans for product layout
+                const productId = quoteResult.MV_Product_Id;
+                
+                if (productId) {
+                    const planResult = await getProductPlans({ productId });
+                    console.log('>> planResult: ' + JSON.stringify(planResult));
+                    this.productPlans = planResult;
+                    this.productPlanOptions = planResult.map(p => ({ 
+                        label: p.label, 
+                        value: p.value 
+                    }));
+                }
             }
         } catch (error) {
             console.error('Error loading data', error);
@@ -106,6 +167,7 @@ export default class AddProductsCustomLwc extends LightningElement {
         }
     }
 
+    // Product layout event handlers
     handlePlanChange(event) {
         this.selectedPlanId = event.target.value;
         console.log('>> selectedPlanId: ' + this.selectedPlanId);
@@ -133,11 +195,60 @@ export default class AddProductsCustomLwc extends LightningElement {
         this.description = event.target.value;
     }
 
+    // Service layout event handlers
+    handleServiceFieldChange(event) {
+        const rowId = event.target.dataset.rowId;
+        const fieldName = event.target.dataset.field;
+        const value = event.target.value;
+        console.log('event ', event);
+        console.log('rowId ', event.target.dataset.rowId);
+        
+        const rowIndex = this.serviceRows.findIndex(row => row.id === rowId);
+        console.log('rowIndex ', rowIndex);
+        if (rowIndex !== -1) {
+            this.serviceRows[rowIndex][fieldName] = fieldName === 'quantityHours' || fieldName === 'pricePerHour' 
+                ? parseFloat(value) || 0 
+                : value;
+            
+            // Calculate total price
+            const row = this.serviceRows[rowIndex];
+            row.totalPrice = (row.quantityHours || 0) * (row.pricePerHour || 0);
+            
+            // Update the serviceRows array to trigger reactivity
+            this.serviceRows = [...this.serviceRows];
+        }
+    }
+
+    handleAddRow() {
+        this.serviceRows = [...this.serviceRows, {
+            id: this.generateRowId(),
+            title: '',
+            description: '',
+            quantityHours: null,
+            pricePerHour: null,
+            totalPrice: 0
+        }];
+    }
+
+    handleRemoveRow(event) {
+        const rowId = event.target.dataset.rowId;
+        if (this.serviceRows.length > 1) {
+            this.serviceRows = this.serviceRows.filter(row => row.id !== rowId);
+        }
+    }
+
     async handleSave() {
+        if (this.showProductLayout) {
+            return this.handleProductSave();
+        } else {
+            return this.handleServiceSave();
+        }
+    }
+
+    async handleProductSave() {
         // Additional validation - ensure discount doesn't exceed 100%
         if (this.discount && this.discount > 100) {
             console.log('Invalid discount value: ' + this.discount);
-            
             this.showMessage('Validation Error - Discount cannot exceed 100%', 'error');
             return;
         }
@@ -160,6 +271,43 @@ export default class AddProductsCustomLwc extends LightningElement {
         } catch (error) {
             console.error('Error creating QLI', error);
             this.showMessage('Failed to create Quote Line Item. Please try again.', 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    async handleServiceSave() {
+        if (!this.isServiceDataValid()) {
+            this.showMessage('Please fill in all required fields for all service items', 'error');
+            return;
+        }
+
+        this.isLoading = true;
+        
+        try {
+            const serviceItems = this.serviceRows.map(row => ({
+                title: row.title,
+                description: row.description,
+                quantityHours: row.quantityHours,
+                pricePerHour: row.pricePerHour
+            }));
+            console.log('>> serviceItems: ' + JSON.stringify(serviceItems));
+
+            const qliIds = await createServiceQuoteLineItems({
+                quoteId: this.recordId,
+                serviceItems: serviceItems
+            });
+            
+            this.showMessage(`${qliIds.length} Service Line Items created successfully`, 'success');
+            
+            // Navigate back to quote
+            setTimeout(() => {
+                window.location.href = '/' + this.recordId;
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error creating service QLIs', error);
+            this.showMessage('Failed to create Service Line Items. Please try again.', 'error');
         } finally {
             this.isLoading = false;
         }
