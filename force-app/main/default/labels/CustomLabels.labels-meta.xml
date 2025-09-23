@@ -14,18 +14,4 @@
         <shortDescription>DocuSignTemplateId</shortDescription>
         <value>7a1aa69c-ed26-4143-a051-e0e171fcbd95</value>
     </labels>
-    <labels>
-        <fullName>ExceptionEmailRecipients</fullName>
-        <language>en_US</language>
-        <protected>false</protected>
-        <shortDescription>ExceptionEmailRecipients</shortDescription>
-        <value>harsh.g@mvclouds.com,yash.p@mvclouds.com</value>
-    </labels>
-    <labels>
-        <fullName>Zoho_Organization_Id</fullName>
-        <language>en_US</language>
-        <protected>false</protected>
-        <shortDescription>Zoho_Organization_Id</shortDescription>
-        <value>60046553013</value>
-    </labels>
 </CustomLabels>
