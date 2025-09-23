@@ -12,11 +12,11 @@
                         <div class="slds-page-header__name">
                             <div class="slds-page-header__name-title">
                                 <h1>
-                                    <span class="slds-page-header__title slds-truncate">New Quote Line Item</span>
+                                    <span class="slds-page-header__title slds-truncate">{pageTitle}</span>
                                 </h1>
                             </div>
                         </div>
-                        <p class="slds-page-header__name-meta">Add a new line item to your quote</p>
+                        <p class="slds-page-header__name-meta">{pageDescription}</p>
                     </div>
                 </div>
             </div>
@@ -25,59 +25,159 @@
 
     <div class="slds-container_large slds-container_center slds-p-around_medium">
         <template if:true={quote}>
-            <!-- Quote Information Section -->
-            <lightning-card title="Quote Information" icon-name="standard:quotes">
-                <div class="slds-card__body slds-card__body_inner">
-                    <div class="slds-grid slds-gutters slds-wrap">
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-input label="Quote Name" value={quote.Name} readonly class="readonly-field"></lightning-input>
-                        </div>
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-input label="Product Name" value={productName} readonly class="readonly-field"></lightning-input>
+            <!-- Product Layout - Show when no product line exists yet -->
+            <template if:true={showProductLayout}>
+                <!-- Quote Information Section -->
+                <lightning-card title="Quote Information" icon-name="standard:quotes">
+                    <div class="slds-card__body slds-card__body_inner">
+                        <div class="slds-grid slds-gutters slds-wrap">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-input label="Quote Name" value={quote.Name} readonly class="readonly-field"></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-input label="Product Name" value={productName} readonly class="readonly-field"></lightning-input>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </lightning-card>
+                </lightning-card>
 
-            <!-- Product Configuration Section -->
-            <lightning-card title="Product Plan Configuration" icon-name="standard:product" class="slds-m-top_medium">
-                <div class="slds-card__body slds-card__body_inner">
-                    <div class="slds-grid slds-gutters slds-wrap">
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-combobox label="Product Plan" value={selectedPlanId} options={productPlanOptions} onchange={handlePlanChange} required placeholder="Select a product plan" message-when-value-missing="Please select a product plan">
-                                <span slot="label">
-                                    Product Plan <span class="slds-required">*</span>
-                                </span>
-                            </lightning-combobox>
-                        </div>
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <template if:true={listPrice}>
-                                <lightning-input label="List Price" value={formattedListPrice} readonly class="readonly-field"></lightning-input>
-                            </template>
-                            <template if:false={listPrice}>
-                                <lightning-input label="List Price" value="Select a product plan to view price" readonly class="readonly-field"></lightning-input>
-                            </template>
+                <!-- Product Configuration Section -->
+                <lightning-card title="Product Plan Configuration" icon-name="standard:product" class="slds-m-top_medium">
+                    <div class="slds-card__body slds-card__body_inner">
+                        <div class="slds-grid slds-gutters slds-wrap">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-combobox label="Product Plan" value={selectedPlanId} options={productPlanOptions} onchange={handlePlanChange} required placeholder="Select a product plan" message-when-value-missing="Please select a product plan">
+                                    <span slot="label">
+                                        Product Plan <span class="slds-required">*</span>
+                                    </span>
+                                </lightning-combobox>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <template if:true={listPrice}>
+                                    <lightning-input label="List Price" value={formattedListPrice} readonly class="readonly-field"></lightning-input>
+                                </template>
+                                <template if:false={listPrice}>
+                                    <lightning-input label="List Price" value="Select a product plan to view price" readonly class="readonly-field"></lightning-input>
+                                </template>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </lightning-card>
+                </lightning-card>
 
-            <!-- Pricing & Details Section -->
-            <lightning-card title="Pricing & Additional Details" icon-name="standard:currency" class="slds-m-top_medium">
-                <div class="slds-card__body slds-card__body_inner">
-                    <div class="slds-grid slds-gutters slds-wrap">
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-input type="number" step="0.01" label="Discount (%)" value={discount} onchange={handleDiscountChange} placeholder="Enter discount percentage" field-level-help="Enter the discount percentage to be applied to this line item"></lightning-input>
-                        </div>
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                            <lightning-input label="Final Price" value={formattedFinalPrice} readonly class="readonly-field"></lightning-input>
-                        </div>
-                        <div class="slds-col slds-size_1-of-1">
-                            <lightning-textarea label="Description" maxlength="255" value={description} onchange={handleDescriptionChange} placeholder="Enter additional details or notes for this line item" field-level-help="Optional description for this quote line item (255 characters max)"></lightning-textarea>
+                <!-- Pricing & Details Section -->
+                <lightning-card title="Pricing & Additional Details" icon-name="standard:currency" class="slds-m-top_medium">
+                    <div class="slds-card__body slds-card__body_inner">
+                        <div class="slds-grid slds-gutters slds-wrap">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-input type="number" step="0.01" label="Discount (%)" value={discount} onchange={handleDiscountChange} placeholder="Enter discount percentage" field-level-help="Enter the discount percentage to be applied to this line item" data-field="discount"></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-input label="Final Price" value={formattedFinalPrice} readonly class="readonly-field"></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1">
+                                <lightning-textarea label="Description" maxlength="255" value={description} onchange={handleDescriptionChange} placeholder="Enter additional details or notes for this line item" field-level-help="Optional description for this quote line item (255 characters max)"></lightning-textarea>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </lightning-card>
+                </lightning-card>
+            </template>
+
+            <!-- Service Layout - Show when product line already exists -->
+            <template if:false={showProductLayout}>
+                <!-- Quote Information Section -->
+                <lightning-card title="Quote Information" icon-name="standard:quotes">
+                    <div class="slds-card__body slds-card__body_inner">
+                        <div class="slds-grid slds-gutters slds-wrap">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-input label="Quote Name" value={quote.Name} readonly class="readonly-field"></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-input label="Product Name" value={productName} readonly class="readonly-field"></lightning-input>
+                            </div>
+                        </div>
+                    </div>
+                </lightning-card>
+
+                <!-- Service Items Configuration Section -->
+                <lightning-card title="Service Quote Line Items" icon-name="standard:service_contract" class="slds-m-top_medium">
+                    <div class="slds-card__body slds-card__body_inner">
+                        <div class="slds-p-bottom_medium">
+                            <p class="slds-text-body_regular">Add customization services for your product. All fields are required.</p>
+                        </div>
+
+                        <!-- Service Items Table -->
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Title">
+                                            Title <span class="slds-required">*</span>
+                                        </div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Description">
+                                            Description
+                                        </div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Quantity (Hours)">
+                                            Quantity (Hours) <span class="slds-required">*</span>
+                                        </div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Price per Hour">
+                                            Price per Hour <span class="slds-required">*</span>
+                                        </div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Total Price">
+                                            Total Price
+                                        </div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Actions">
+                                            Actions
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={serviceRows} for:item="row">
+                                    <tr key={row.id} class="slds-hint-parent">
+                                        <td>
+                                            <lightning-input value={row.title} onchange={handleServiceFieldChange} data-row-id={row.id} data-field="title" variant="label-hidden" placeholder="Enter service title" required></lightning-input>
+                                        </td>
+                                        <td>
+                                            <lightning-textarea value={row.description} onchange={handleServiceFieldChange} data-row-id={row.id} data-field="description" variant="label-hidden" placeholder="Enter service description" max-length="255"></lightning-textarea>
+                                        </td>
+                                        <td>
+                                            <lightning-input type="number" step="0.25" min="0.25" value={row.quantityHours} onchange={handleServiceFieldChange} data-row-id={row.id} data-field="quantityHours" variant="label-hidden" placeholder="0.00"></lightning-input>
+                                        </td>
+                                        <td>
+                                            <lightning-input type="number" step="0.01" min="0.01" value={row.pricePerHour} onchange={handleServiceFieldChange} data-row-id={row.id} data-field="pricePerHour" variant="label-hidden" placeholder="0.00"></lightning-input>
+                                        </td>
+                                        <td>
+                                            <span class="slds-text-body_regular slds-p-left_small">
+                                                {row.totalPrice}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <template if:true={row.id}>
+                                                <lightning-button-icon icon-name="utility:delete" variant="border-filled" alternative-text="Remove row" title="Remove row" onclick={handleRemoveRow} data-row-id={row.id} disabled={isOneRowDisabled}></lightning-button-icon>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+
+                        <!-- Add Row Button -->
+                        <div class="slds-m-top_medium">
+                            <lightning-button variant="neutral" label="Add Another Row" onclick={handleAddRow} icon-name="utility:add"></lightning-button>
+                        </div>
+                    </div>
+                </lightning-card>
+            </template>
         </template>
 
         <template if:false={quote}>
