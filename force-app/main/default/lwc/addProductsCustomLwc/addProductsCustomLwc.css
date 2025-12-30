@@ -1,0 +1,80 @@
+.readonly-field input {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.slds-docked-form-footer {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #e5e5e5;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+}
+
+.slds-page-header {
+    background: linear-gradient(135deg, #0176d3 0%, #005fb2 100%);
+    color: white;
+}
+
+.slds-page-header__title {
+    color: white;
+}
+
+.slds-page-header__name-meta {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.slds-icon-standard-quote-line-item {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Card styling enhancements */
+.slds-card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.slds-card .slds-card__header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e5e5e5;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+/* Form enhancements */
+.slds-form-element__label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.slds-required {
+    color: #dc2626;
+}
+
+.notification-div{
+    width: 50%;
+    margin: auto;
+}
+
+.buttons-div {
+    margin: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .slds-docked-form-footer .slds-grid_align-spread {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .slds-docked-form-footer .slds-grid.slds-gutters_small {
+        justify-content: stretch;
+    }
+    
+    .slds-docked-form-footer .slds-col {
+        flex: 1;
+    }
+}
