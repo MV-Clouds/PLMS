@@ -1,17 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <actionCalls>
+        <name>Create_and_Send_Zoho_Invoice</name>
+        <label>Create and Send Zoho Invoice</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <actionName>ZohoInvoiceManager</actionName>
+        <actionType>apex</actionType>
+        <flowTransactionModel>Automatic</flowTransactionModel>
+        <inputParameters>
+            <name>invoiceIds</name>
+            <value>
+                <elementReference>Create_Invoice</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>ZohoInvoiceManager</nameSegment>
+        <offset>0</offset>
+    </actionCalls>
+    <actionCalls>
         <name>on_the_day_reminder</name>
         <label>on the day reminder</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
         <actionName>emailSimple</actionName>
         <actionType>emailSimple</actionType>
+        <connector>
+            <targetReference>Create_Invoice</targetReference>
+        </connector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
             <name>emailAddresses</name>
             <value>
                 <elementReference>$Record.Email__c</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>bccRecipientAddressList</name>
+            <value>
+                <stringValue>mitraj.g@mvclouds.com</stringValue>
             </value>
         </inputParameters>
         <inputParameters>
@@ -72,6 +98,12 @@
             </value>
         </inputParameters>
         <inputParameters>
+            <name>bccRecipientAddressList</name>
+            <value>
+                <stringValue>mitraj.g@mvclouds.com</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
             <name>senderType</name>
             <value>
                 <stringValue>CurrentUser</stringValue>
@@ -129,6 +161,12 @@
             </value>
         </inputParameters>
         <inputParameters>
+            <name>bccRecipientAddressList</name>
+            <value>
+                <stringValue>mitraj.g@mvclouds.com</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
             <name>senderType</name>
             <value>
                 <stringValue>CurrentUser</stringValue>
@@ -171,87 +209,15 @@
         <offset>0</offset>
         <versionString>1.0.1</versionString>
     </actionCalls>
-    <actionCalls>
-        <name>X3_days_before_reminder</name>
-        <label>3 days before reminder</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <actionName>emailSimple</actionName>
-        <actionType>emailSimple</actionType>
-        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
-        <inputParameters>
-            <name>emailAddresses</name>
-            <value>
-                <elementReference>$Record.Email__c</elementReference>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>senderType</name>
-            <value>
-                <stringValue>CurrentUser</stringValue>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>senderAddress</name>
-        </inputParameters>
-        <inputParameters>
-            <name>composeEmailContent</name>
-            <value>
-                <stringValue>True</stringValue>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>emailSubject</name>
-            <value>
-                <stringValue>Package Renewal Reminder</stringValue>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>emailBody</name>
-            <value>
-                <elementReference>x3DaysBeforeReminder</elementReference>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>sendRichBody</name>
-            <value>
-                <booleanValue>true</booleanValue>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>useLineBreaks</name>
-            <value>
-                <booleanValue>true</booleanValue>
-            </value>
-        </inputParameters>
-        <nameSegment>emailSimple</nameSegment>
-        <offset>0</offset>
-        <versionString>1.0.1</versionString>
-    </actionCalls>
     <apiVersion>64.0</apiVersion>
-    <decisions>
-        <name>Is_Trial</name>
-        <label>Is Trial</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <defaultConnector>
-            <targetReference>X3_days_before_reminder</targetReference>
-        </defaultConnector>
-        <defaultConnectorLabel>No</defaultConnectorLabel>
-        <rules>
-            <name>Yes</name>
-            <conditionLogic>and</conditionLogic>
-            <conditions>
-                <leftValueReference>$Record.Is_Trial__c</leftValueReference>
-                <operator>EqualTo</operator>
-                <rightValue>
-                    <booleanValue>true</booleanValue>
-                </rightValue>
-            </conditions>
-            <label>Yes</label>
-        </rules>
-    </decisions>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <description>add create invoice and invoice line item and add apex action create and send zoho invoice</description>
     <environments>Default</environments>
+    <formulas>
+        <name>X5Dayafter</name>
+        <dataType>Date</dataType>
+        <expression>TODAY()+5</expression>
+    </formulas>
     <interviewLabel>Reminder Emails for Product Expiration {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Reminder Emails for Product Expiration</label>
     <processMetadataValues>
@@ -273,6 +239,82 @@
         </value>
     </processMetadataValues>
     <processType>AutoLaunchedFlow</processType>
+    <recordCreates>
+        <name>Create_Invoice</name>
+        <label>Create Invoice</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Create_Invoice_Line_Item</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>Discount__c</field>
+            <value>
+                <numberValue>0.0</numberValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>End_Date__c</field>
+            <value>
+                <elementReference>X5Dayafter</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Price__c</field>
+            <value>
+                <elementReference>$Record.Product_Plan__r.Price__c</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Product_Plan__c</field>
+            <value>
+                <elementReference>$Record.Product_Plan__r.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Product_Subscriber__c</field>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Start_Date__c</field>
+            <value>
+                <elementReference>$Flow.CurrentDate</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Status__c</field>
+            <value>
+                <stringValue>Sent</stringValue>
+            </value>
+        </inputAssignments>
+        <object>Invoice__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordCreates>
+    <recordCreates>
+        <name>Create_Invoice_Line_Item</name>
+        <label>Create Invoice Line Item</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Create_and_Send_Zoho_Invoice</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>Invoice__c</field>
+            <value>
+                <elementReference>Create_Invoice</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Product_Plan__c</field>
+            <value>
+                <elementReference>$Record.Product_Plan__r.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <object>Invoice_Line_Item__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordCreates>
     <start>
         <locationX>0</locationX>
         <locationY>0</locationY>
@@ -308,17 +350,6 @@
         <object>Product_Subscriber__c</object>
         <recordTriggerType>CreateAndUpdate</recordTriggerType>
         <scheduledPaths>
-            <name>X3_days_before_expiration</name>
-            <connector>
-                <targetReference>Is_Trial</targetReference>
-            </connector>
-            <label>3 days before expiration</label>
-            <offsetNumber>-3</offsetNumber>
-            <offsetUnit>Days</offsetUnit>
-            <recordField>Expiration_DateTime__c</recordField>
-            <timeSource>RecordField</timeSource>
-        </scheduledPaths>
-        <scheduledPaths>
             <name>X1_day_before</name>
             <connector>
                 <targetReference>X1_days_before_reminder</targetReference>
@@ -353,25 +384,25 @@
         </scheduledPaths>
         <triggerType>RecordAfterSave</triggerType>
     </start>
-    <status>Active</status>
+    <status>Draft</status>
     <textTemplates>
         <name>onTheDayReminder</name>
         <isViewedAsPlainText>false</isViewedAsPlainText>
-        <text>&lt;p&gt;Hello {!$Record.Org_Name__c},&lt;/p&gt;&lt;p&gt;Your package {!$Record.Product__r.Name} is expiring today.&lt;/p&gt;&lt;p&gt;Please contact us at &lt;a href=&quot;https://mvcloudsprivatelimited--plms.sandbox.lightning.force.com/builder_platform_interaction/info@mvclouds.com&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot; style=&quot;color: rgb(11, 92, 171);&quot;&gt;info@mvclouds.com&lt;/a&gt; for renew it.&lt;/p&gt;&lt;p&gt;Thanks,&lt;/p&gt;&lt;p&gt;MV Clouds&lt;/p&gt;</text>
+        <text>&lt;p&gt;Hello {!$Record.First_Name__c} {!$Record.Last_Name__c},&lt;/p&gt;&lt;p&gt;Your package {!$Record.Product__r.Name} is expiring today.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Org Details:&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;Org Name: {!$Record.Org_Name__c}&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;Org Id: {!$Record.Org_Id__c}&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Please contact us at &lt;a href=&quot;mailto:info@mvclouds.com&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot;&gt;info@mvclouds.com&lt;/a&gt; for renew it.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Thanks,&lt;/p&gt;&lt;p&gt;MV Clouds&lt;/p&gt;</text>
     </textTemplates>
     <textTemplates>
         <name>x1DayAfterReminder</name>
         <isViewedAsPlainText>false</isViewedAsPlainText>
-        <text>&lt;p&gt;Hello {!$Record.Org_Name__c},&lt;/p&gt;&lt;p&gt;Your package {!$Record.Product__r.Name} is expired.&lt;/p&gt;&lt;p&gt;Please contact us at &lt;a href=&quot;https://mvcloudsprivatelimited--plms.sandbox.lightning.force.com/builder_platform_interaction/info@mvclouds.com&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot; style=&quot;color: rgb(11, 92, 171);&quot;&gt;info@mvclouds.com&lt;/a&gt; for renew it.&lt;/p&gt;&lt;p&gt;Thanks,&lt;/p&gt;&lt;p&gt;MV Clouds&lt;/p&gt;</text>
+        <text>&lt;p&gt;Hello {!$Record.First_Name__c} {!$Record.Last_Name__c},&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Your package {!$Record.Product__r.Name} is expired.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Org Details:&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;Org Name: {!$Record.Org_Name__c}&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;Org Id: {!$Record.Org_Id__c}&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Please contact us at &lt;a href=&quot;mailto:info@mvclouds.com&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot;&gt;info@mvclouds.com&lt;/a&gt; for renew it.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Thanks,&lt;/p&gt;&lt;p&gt;MV Clouds&lt;/p&gt;</text>
     </textTemplates>
     <textTemplates>
         <name>x1DayBeforeReminder</name>
         <isViewedAsPlainText>false</isViewedAsPlainText>
-        <text>&lt;p&gt;Hello {!$Record.Org_Name__c},&lt;/p&gt;&lt;p&gt;Your package {!$Record.Product__r.Name} is expiring tomorrow.&lt;/p&gt;&lt;p&gt;Please contact us at &lt;a href=&quot;https://mvcloudsprivatelimited--plms.sandbox.lightning.force.com/builder_platform_interaction/info@mvclouds.com&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot; style=&quot;color: rgb(11, 92, 171);&quot;&gt;info@mvclouds.com&lt;/a&gt; for renew it.&lt;/p&gt;&lt;p&gt;Thanks,&lt;/p&gt;&lt;p&gt;MV Clouds&lt;/p&gt;</text>
+        <text>&lt;p&gt;Hello {!$Record.First_Name__c} {!$Record.Last_Name__c},&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Your package {!$Record.Product__r.Name} is expiring tomorrow.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Org Details:&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;Org Name: {!$Record.Org_Name__c}&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;Org Id: {!$Record.Org_Id__c}&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Please contact us at &lt;a href=&quot;mailto:info@mvclouds.com&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot;&gt;info@mvclouds.com&lt;/a&gt; for renew it.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Thanks,&lt;/p&gt;&lt;p&gt;MV Clouds&lt;/p&gt;</text>
     </textTemplates>
     <textTemplates>
         <name>x3DaysBeforeReminder</name>
         <isViewedAsPlainText>false</isViewedAsPlainText>
-        <text>&lt;p&gt;Hello {!$Record.Org_Name__c},&lt;/p&gt;&lt;p&gt;Your package {!$Record.Product__r.Name} is expiring in 3 days.&lt;/p&gt;&lt;p&gt;Please contact us at &lt;a href=&quot;info@mvclouds.com&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot;&gt;info@mvclouds.com&lt;/a&gt; for renew it.&lt;/p&gt;&lt;p&gt;Thanks,&lt;/p&gt;&lt;p&gt;MV Clouds&lt;/p&gt;</text>
+        <text>&lt;p&gt;Hello {!$Record.First_Name__c} {!$Record.Last_Name__c},&lt;/p&gt;&lt;p&gt;Your package {!$Record.Product__r.Name} is expiring in 3 days.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Org Details:&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;Org Name: {!$Record.Org_Name__c}&lt;/p&gt;&lt;p class=&quot;ql-indent-1&quot;&gt;Org Id: {!$Record.Org_Id__c}&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Please contact us at &lt;a href=&quot;mailto:info@mvclouds.com&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot;&gt;info@mvclouds.com&lt;/a&gt; for renew it.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;Thanks,&lt;/p&gt;&lt;p&gt;MV Clouds&lt;/p&gt;</text>
     </textTemplates>
 </Flow>
