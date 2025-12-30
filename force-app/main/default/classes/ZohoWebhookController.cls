@@ -1,6 +1,6 @@
 @RestResource(urlMapping='/webhook/zoho/*')
 global without sharing class ZohoWebhookController {
-
+    
     @HttpPost
     global static void handleZohoWebhook() {
         try {
@@ -11,13 +11,13 @@ global without sharing class ZohoWebhookController {
             
             String jsonString = RestContext.request.requestBody.toString();
             System.debug('Request Body: ' + jsonString);
-    
+            
             String path = req.requestURI;
             System.debug('🌐 Incoming Zoho Webhook at: ' + path);
-    
+            
             Map<String, Object> payload = (Map<String, Object>)JSON.deserializeUntyped(jsonString);
             System.debug('payload: ' + payload);
-    
+            
             if (path.contains('/webhook/zoho/quote')) {
                 System.debug('✅ Handling Quote Webhook');
                 processQuoteData(payload);
@@ -31,19 +31,19 @@ global without sharing class ZohoWebhookController {
             sendEmail('Hello,<br/><br/>An Error occurred executing in <br/><br/>Apex Class - ZohoWebhookController.<br/>Method Name - handleZohoWebhook.<br/>Exeception Message : ' + e.getMessage() + '<br/>Exeception Line Number : ' + e.getLineNumber() + '<br/>Strack Track : ' + e.getStackTraceString() + '<br/>Regards,<br/>PLMS Team');
         }
     }
-
+    
     private static void processQuoteData(Map<String, Object> payload) {
         try {
             if (payload.containsKey('estimate')){
                 Map<String, Object> estimate = (Map<String, Object>)payload.get('estimate');
                 System.debug('Estimate Details: ' + estimate);
-    
+                
                 // Example: Extracting specific fields from the estimate
                 String estimateNumber = (String)estimate.get('reference_number');
                 String status = (String)estimate.get('status_formatted');
                 System.debug('Estimate Number: ' + estimateNumber);
                 System.debug('Status: ' + status);
-    
+                
                 // Add your custom logic here, e.g., updating records in Salesforce
                 if (estimateNumber != null && status != null) {
                     if(status == 'Accepted'){
@@ -55,7 +55,7 @@ global without sharing class ZohoWebhookController {
                             quoteToUpdate.Status = 'Accepted';
                             update quoteToUpdate;
                             System.debug('Quote updated successfully: ' + quoteToUpdate);
-        
+                            
                             List<Opportunity> oppRecs = [SELECT Id, StageName, Is_Product_Trial__c, Is_Product_Trial_Extended__c FROM Opportunity WHERE Id = :quoteRec[0].OpportunityId];
                             if (!oppRecs.isEmpty()) {
                                 Opportunity oppRec = oppRecs[0];
@@ -73,6 +73,10 @@ global without sharing class ZohoWebhookController {
                                 cont.Opportunity__c = quoteToUpdate.OpportunityId;
                                 cont.Status = 'Draft';
                                 insert cont;
+                                
+                                // Create DocuSign envelope for the contract
+                                System.debug('Creating DocuSign envelope for contract: ' + cont.Id);
+                                DocuSignHandler.createAndSendEnvelope(cont.Id);
                             } else {
                                 System.debug('No opportunity found for the quote.');
                                 sendEmail('Hello,<br/><br/>An Error occurred executing in <br/><br/>Apex Class - ZohoWebhookController.<br/>Method Name - processQuoteData.<br/>Exeception Message : No opportunity found for the quote - ' + quoteToUpdate.Id + ' in the Org. Hence no contract record is not created. <br/>Regards,<br/>PLMS Team');
@@ -95,19 +99,19 @@ global without sharing class ZohoWebhookController {
             sendEmail('Hello,<br/><br/>An Error occurred executing in <br/><br/>Apex Class - ZohoWebhookController.<br/>Method Name - processQuoteData.<br/>Exeception Message : ' + e.getMessage() + '<br/>Exeception Line Number : ' + e.getLineNumber() + '<br/>Strack Track : ' + e.getStackTraceString() + '<br/>Regards,<br/>PLMS Team');
         }
     }
-
+    
     private static void processInvoiceData(Map<String, Object> payload) {
         try {
             if (payload.containsKey('invoice')){
                 Map<String, Object> invoice = (Map<String, Object>)payload.get('invoice');
                 System.debug('Invoice Details: ' + invoice);
-    
+                
                 // Example: Extracting specific fields from the invoice
                 String invoiceNumber = (String)invoice.get('reference_number');
                 String status = (String)invoice.get('status_formatted');
                 System.debug('Invoice Number: ' + invoiceNumber);
                 System.debug('Status: ' + status);
-    
+                
                 // Add your custom logic here, e.g., updating records in Salesforce
                 if (invoiceNumber != null && status != null) {
                     if(status == 'Paid'){
@@ -119,21 +123,21 @@ global without sharing class ZohoWebhookController {
                             invoiceToUpdate.Status__c = 'Paid';
                             update invoiceToUpdate;
                             System.debug('Invoice updated successfully: ' + invoiceToUpdate);
-        
+                            
                             // fetch product subscriber records related to this invoice
                             List<Product_Subscriber__c> psRecords = [ SELECT Id, Expiration_DateTime__c, Active__c, Product_Plan__c, Is_Temp_Expiry__c FROM Product_Subscriber__c WHERE Id = :invoiceRec[0].Product_Subscriber__c AND Active__c = true ORDER BY CreatedDate DESC LIMIT 1];
                             if (!psRecords.isEmpty()) {
                                 Product_Subscriber__c psRecord = psRecords[0];
                                 System.debug('Found product subscriber: ' + psRecord);
-        
+                                
                                 List<Product_Plan__c> ppRecords = [ SELECT Id, Duration__c FROM Product_Plan__c WHERE Id = :psRecord.Product_Plan__c LIMIT 1];
                                 // fetch product plan records related to this product subscriber
                                 if (!ppRecords.isEmpty()) {
                                     Product_Plan__c ppRecord = ppRecords[0];
                                     System.debug('Found product plan: ' + ppRecord);
-        
+                                    
                                     Integer duration = ppRecord.Duration__c != null ? (Integer)ppRecord.Duration__c : 0;
-    
+                                    
                                     if (psRecord.Expiration_DateTime__c != null && psRecord.Expiration_DateTime__c.date() >= System.today()) {
                                         // Add months to today’s date
                                         Date futureDate = invoiceToUpdate.Start_Date__c.addMonths(duration);
@@ -150,9 +154,9 @@ global without sharing class ZohoWebhookController {
                                         // Combine into DateTime
                                         psRecord.Expiration_DateTime__c = DateTime.newInstance(futureDate, tenAM);
                                     }
-    
+                                    
                                     psRecord.Is_Temp_Expiry__c = false;
-        
+                                    
                                     update psRecord;
                                     System.debug('Product subscriber updated successfully: ' + psRecord);
                                 } else {
@@ -181,8 +185,8 @@ global without sharing class ZohoWebhookController {
             sendEmail('Hello,<br/><br/>An Error occurred executing in <br/><br/>Apex Class - ZohoWebhookController.<br/>Method Name - processInvoiceData.<br/>Exeception Message : ' + e.getMessage() + '<br/>Exeception Line Number : ' + e.getLineNumber() + '<br/>Strack Track : ' + e.getStackTraceString() + '<br/>Regards,<br/>PLMS Team');
         }
     }
-
-    public static void sendEmail(String body) {
+    
+    global static void sendEmail(String body) {
         try {
             Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
             

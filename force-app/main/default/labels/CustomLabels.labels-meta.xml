@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomLabels xmlns="http://soap.sforce.com/2006/04/metadata">
     <labels>
-        <fullName>Zoho_Organization_Id</fullName>
+        <fullName>DocuSignAccId</fullName>
         <language>en_US</language>
         <protected>false</protected>
-        <shortDescription>Zoho_Organization_Id</shortDescription>
-        <value>60046553013</value>
+        <shortDescription>DocuSignAccId</shortDescription>
+        <value>8bcd05b7-8a0f-41d6-bdda-26d90dee9daf</value>
+    </labels>
+    <labels>
+        <fullName>DocuSignTemplateId</fullName>
+        <language>en_US</language>
+        <protected>false</protected>
+        <shortDescription>DocuSignTemplateId</shortDescription>
+        <value>7a1aa69c-ed26-4143-a051-e0e171fcbd95</value>
     </labels>
 </CustomLabels>

@@ -3,6 +3,7 @@ import getQuoteDetails from '@salesforce/apex/AddProductsCustomLwcController.get
 import getProductPlans from '@salesforce/apex/AddProductsCustomLwcController.getProductPlans';
 import createQuoteLineItem from '@salesforce/apex/AddProductsCustomLwcController.createQuoteLineItem';
 import createServiceQuoteLineItems from '@salesforce/apex/AddProductsCustomLwcController.createServiceQuoteLineItems';
+import sendEmail from '@salesforce/apex/AddProductsCustomLwcController.sendEmail';
 
 export default class AddProductsCustomLwc extends LightningElement {
     @api recordId;
@@ -143,7 +144,7 @@ export default class AddProductsCustomLwc extends LightningElement {
             }
             
             if (!this.showProductLayout) {
-                // Initialize service rows for service layout
+                // Initialize service layout
                 this.initializeServiceRows();
             } else {
                 // Load product plans for product layout
@@ -161,6 +162,7 @@ export default class AddProductsCustomLwc extends LightningElement {
             }
         } catch (error) {
             console.error('Error loading data', error);
+            await this.sendErrorEmail('loadQuoteData', error);
             this.showMessage('Failed to load quote details', 'error');
         } finally {
             this.isLoading = false;
@@ -246,16 +248,16 @@ export default class AddProductsCustomLwc extends LightningElement {
     }
 
     async handleProductSave() {
-        // Additional validation - ensure discount doesn't exceed 100%
-        if (this.discount && this.discount > 100) {
-            console.log('Invalid discount value: ' + this.discount);
-            this.showMessage('Validation Error - Discount cannot exceed 100%', 'error');
-            return;
-        }
-
-        this.isLoading = true;
-        
         try {
+            // Additional validation - ensure discount doesn't exceed 100%
+            if (this.discount && this.discount > 100) {
+                console.log('Invalid discount value: ' + this.discount);
+                this.showMessage('Validation Error - Discount cannot exceed 100%', 'error');
+                return;
+            }
+
+            this.isLoading = true;
+            
             const qliId = await createQuoteLineItem({
                 quoteId: this.recordId,
                 productPlanId: this.selectedPlanId,
@@ -270,6 +272,7 @@ export default class AddProductsCustomLwc extends LightningElement {
             
         } catch (error) {
             console.error('Error creating QLI', error);
+            await this.sendErrorEmail('handleProductSave', error);
             this.showMessage('Failed to create Quote Line Item. Please try again.', 'error');
         } finally {
             this.isLoading = false;
@@ -306,8 +309,9 @@ export default class AddProductsCustomLwc extends LightningElement {
             }, 2000);
             
         } catch (error) {
-            console.error('Error creating service QLIs', error);
-            this.showMessage('Failed to create Service Line Items. Please try again.', 'error');
+            console.error('Error creating service line items', error);
+            await this.sendErrorEmail('handleServiceSave', error);
+            this.showMessage('Failed to create service line items. Please try again.', 'error');
         } finally {
             this.isLoading = false;
         }
@@ -329,5 +333,39 @@ export default class AddProductsCustomLwc extends LightningElement {
     clearMessage() {
         this.message = '';
         this.messageType = '';
+    }
+
+    // Send error email notification using Apex method
+    async sendErrorEmail(methodName, error) {
+        try {
+            const errorMessage = error.body ? error.body.message : error.message;
+            const stackTrace = error.body ? error.body.stackTrace : error.stack;
+            
+            const emailBody = `
+                <h3>Error in AddProductsCustomLwc Component</h3>
+                <br/>
+                <strong>Component:</strong> addProductsCustomLwc<br/>
+                <strong>Method:</strong> ${methodName}<br/>
+                <strong>Quote ID:</strong> ${this.recordId}<br/>
+                <strong>Error Message:</strong> ${errorMessage}<br/>
+                <strong>Stack Trace:</strong> ${stackTrace || 'Not available'}<br/>
+                <strong>User Context:</strong> Current user encountered this error<br/>
+                <strong>Timestamp:</strong> ${new Date().toISOString()}<br/>
+                <br/>
+                <strong>Component State:</strong><br/>
+                - Product Layout: ${this.showProductLayout}<br/>
+                - Selected Plan ID: ${this.selectedPlanId}<br/>
+                - Service Rows Count: ${this.serviceRows ? this.serviceRows.length : 0}<br/>
+                <br/>
+                Regards,<br/>
+                PLMS Team
+            `;
+            
+            await sendEmail({ body: emailBody });
+            
+        } catch (emailError) {
+            console.error('Failed to send error notification email:', emailError);
+            // Don't show this error to user as it's a secondary failure
+        }
     }
 }

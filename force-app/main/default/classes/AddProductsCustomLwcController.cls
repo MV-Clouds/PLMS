@@ -306,6 +306,7 @@ public with sharing class AddProductsCustomLwcController {
         }
     }
 
+    @AuraEnabled
     public static void sendEmail(String body) {
         try {
             Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
