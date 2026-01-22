@@ -1,6 +1,57 @@
 @RestResource(urlMapping='/product-subscriber')
 global without sharing class ProductSubscriberAPI {
 
+    @HttpPost
+    global static void createProductSubscriber() {
+        System.debug('POST Method Invoked');
+        RestRequest req = RestContext.request;
+        RestResponse res = RestContext.response;
+
+        try {
+            // Parse the request body
+            String requestBody = req.requestBody.toString();
+            System.debug('Request Body: ' + requestBody);
+
+            if (String.isBlank(requestBody)) {
+                res.statusCode = 400;
+                res.responseBody = Blob.valueOf(JSON.serialize(new ProductSubscriberAPIController.ProductSubscriberResponse(false, 'Request body is required', null)));
+                return;
+            }
+
+            // Deserialize the request
+            ProductSubscriberAPIController.ProductSubscriberRequest request = 
+                (ProductSubscriberAPIController.ProductSubscriberRequest) JSON.deserialize(requestBody, ProductSubscriberAPIController.ProductSubscriberRequest.class);
+
+            // Validate required fields
+            if (String.isBlank(request.action)) {
+                res.statusCode = 400;
+                res.responseBody = Blob.valueOf(JSON.serialize(new ProductSubscriberAPIController.ProductSubscriberResponse(false, 'Action is required (Install, Uninstall, Upgrade)', null)));
+                return;
+            }
+
+            if (request.subscriberData == null) {
+                res.statusCode = 400;
+                res.responseBody = Blob.valueOf(JSON.serialize(new ProductSubscriberAPIController.ProductSubscriberResponse(false, 'subscriberData is required', null)));
+                return;
+            }
+
+            // Process the action using the controller
+            ProductSubscriberAPIController.ProductSubscriberResponse response = ProductSubscriberAPIController.processAction(request);
+
+            if (response.success) {
+                res.statusCode = 200;
+            } else {
+                res.statusCode = 400;
+            }
+            res.responseBody = Blob.valueOf(JSON.serialize(response));
+
+        } catch (Exception e) {
+            System.debug('Error in createProductSubscriber: ' + e.getMessage());
+            res.statusCode = 500;
+            res.responseBody = Blob.valueOf(JSON.serialize(new ProductSubscriberAPIController.ProductSubscriberResponse(false, 'Error: ' + e.getMessage(), null)));
+        }
+    }
+
     @HttpGet
     global static void getProductSubscriber() {
         System.debug(' get Method Invoke ' );
