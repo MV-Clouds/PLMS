@@ -84,10 +84,13 @@ public without sharing class ProductSubscriberAPIController {
     public static ProductSubscriberResponse handleInstall(Product_Subscriber__c subscriberData, Product__c product, List<String> notificationEmails) {
         try {
             // Populate necessary fields for product subscriber record
+
+            DateTime expirationDate = DateTime.now().addDays(7);
             subscriberData.Product__c = product.Id;
             subscriberData.Is_Trial__c = true;
             subscriberData.Install_Date__c = System.today();
             subscriberData.Active__c = true;
+            subscriberData.Expiration_DateTime__c = expirationDate;
 
             // Find Product Version by Version_Number_Text__c
             List<Product_Version__c> productVersionRecs = [
