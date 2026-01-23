@@ -1,5 +1,26 @@
+/**
+ * Class Name: ProductSubscriberAPI
+ * Test Class: - ProductSubscriberAPITest
+ * @description: REST API to handle product subscriber actions (Install, Uninstall, Upgrade)
+ * ****************************************************************
+ * Created Date: December, 2024
+ * Created By: Kevin Suvagiya
+ * ****************************************************************
+ * Modification History:
+ * * Date Modified - Developer Name - Description
+ * 21 January, 2026 - Rachit Shah - Added Post Method named createProductSubscriber and implemented logic to handle Install, Uninstall, Upgrade actions
+ */
 @RestResource(urlMapping='/product-subscriber')
 global without sharing class ProductSubscriberAPI {
+
+    /*
+    *********************************************************
+    * Method Name: createProductSubscriber
+    * Description: Handles POST requests to create or update product subscriber records based on action
+    * Parameters: None (reads from RestRequest)
+    * Return Type: void (writes to RestResponse)
+    *********************************************************
+    */
 
     @HttpPost
     global static void createProductSubscriber() {
@@ -52,6 +73,14 @@ global without sharing class ProductSubscriberAPI {
         }
     }
 
+    /*
+    *********************************************************
+    * Method Name: getProductSubscriber
+    * Description: Handles GET requests to retrieve product subscriber records based on orgId and productName
+    * Parameters: orgId (String), productName (String)
+    * Return Type: void (writes to RestResponse)
+    *********************************************************
+    */
     @HttpGet
     global static void getProductSubscriber() {
         System.debug(' get Method Invoke ' );

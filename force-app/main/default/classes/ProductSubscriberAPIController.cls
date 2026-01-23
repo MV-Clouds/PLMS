@@ -2,12 +2,16 @@
  * Class Name: ProductSubscriberAPIController
  * Test Class: - ProductSubscriberAPIControllerTest
  * @description: Used to handle product subscriber actions (Install, Uninstall, Upgrade) via REST API
+ * Install - Creates Product Subscriber, Opportunity, Lead, and Task records
+ * Uninstall - Closes Opportunity and deactivates Product Subscriber
+ * Upgrade - Updates Product Subscriber with new version
  * ****************************************************************
  * Created Date: 21 January, 2026
  * Created By: Rachit Shah
  * ****************************************************************
  * Modification Log:
  * ****************************************************************
+ * 
 */
 public without sharing class ProductSubscriberAPIController {
     
